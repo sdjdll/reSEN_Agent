@@ -28,7 +28,6 @@ class dick:
         self.__data[key] = value
 
     def pop(self,key:str)->None:
-        """删掉一个键（下次 update() 落盘时才真的消失）。"""
         self.__data.pop(key, None)
 
     def update(self)->None:

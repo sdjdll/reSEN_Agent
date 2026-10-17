@@ -4,7 +4,6 @@ from . import TOOLS_DIR
 from .interface.meta_tool import meta_tool
 
 class tool_view(meta_tool):
-    """元工具：查看 tools/ 下某个工具的定义（schema 与源码）。"""
 
     def __init__(self) -> None:
         self.schema += [{
@@ -29,7 +28,6 @@ class tool_view(meta_tool):
         }]
 
     def load_module(self, name: str, module_path):
-        """按文件路径加载工具模块，返回模块对象。"""
         import importlib.util
         import sys
 
@@ -58,5 +56,4 @@ class tool_view(meta_tool):
             schema = getattr(module.tool, "schema", None)
         return {"name": name, "schema": schema, "source": source}
 
-# 模块级单例：导入时注册 schema 一次，运行期复用
 tool = tool_view()

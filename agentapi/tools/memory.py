@@ -9,9 +9,7 @@ class Memory(hotplug_tool):
         import os, json
         from datetime import datetime
 
-        # 相对根目录：reSEN_Agent（默认位于项目目录下；可用 RESEN_MEMORY_ROOT 覆盖根）
         ROOT = os.environ.get("RESEN_MEMORY_ROOT") or "/home/sdjini/Projects/reSEN-Agent"
-        # 工具内部一律使用相对根目录的相对路径
         REL = {"temp": "history/temp", "memory": "history/memory"}
         DIRS = {k: os.path.join(ROOT, v) for k, v in REL.items()}
         STORE = {k: os.path.join(v, "store.json") for k, v in DIRS.items()}
@@ -62,14 +60,12 @@ class Memory(hotplug_tool):
         if not scope:
             return json.dumps({"error": "scope 必须是 temp 或 memory"}, ensure_ascii=False)
 
-        # ---------- list ----------
         if action == "list":
             data = _load(scope)
             return json.dumps({"scope": scope, "rel_dir": REL[scope], "count": len(data),
                                "entries": [{"key": k, **v} for k, v in data.items()]},
                               ensure_ascii=False, indent=2)
 
-        # ---------- get ----------
         if action == "get":
             if not key:
                 return json.dumps({"error": "get 需要 key"}, ensure_ascii=False)
@@ -78,7 +74,6 @@ class Memory(hotplug_tool):
                 return json.dumps({"error": f"未找到: {key}", "scope": scope}, ensure_ascii=False)
             return json.dumps({"scope": scope, "key": key, **data[key]}, ensure_ascii=False, indent=2)
 
-        # ---------- set ----------
         if action == "set":
             if not key or value is None:
                 return json.dumps({"error": "set 需要 key 与 value"}, ensure_ascii=False)
@@ -102,7 +97,6 @@ class Memory(hotplug_tool):
             return json.dumps({"scope": scope, "saved": key, "rel_path": os.path.join(REL[scope], "store.json")},
                               ensure_ascii=False)
 
-        # ---------- update ----------
         if action == "update":
             if not key or value is None:
                 return json.dumps({"error": "update 需要 key 与 value"}, ensure_ascii=False)
@@ -123,7 +117,6 @@ class Memory(hotplug_tool):
             return json.dumps({"scope": scope, "updated": key, "old": old, "new": value},
                               ensure_ascii=False)
 
-        # ---------- delete ----------
         if action == "delete":
             if not key:
                 return json.dumps({"error": "delete 需要 key"}, ensure_ascii=False)
@@ -140,7 +133,6 @@ class Memory(hotplug_tool):
                 _audit("delete", key, old.get("value"), None, reason)
             return json.dumps({"scope": scope, "deleted": key}, ensure_ascii=False)
 
-        # ---------- clear（仅暂存可用）----------
         if action == "clear":
             if scope == "memory":
                 return json.dumps({"error": "长期记忆不支持批量清空，请逐条 delete 并说明理由。"},

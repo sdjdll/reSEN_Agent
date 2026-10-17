@@ -1,17 +1,5 @@
 ﻿#Requires -Version 5.1
-<#
-    reSEN Agent 启动脚本（Windows / PowerShell）
 
-    用法：
-        .\start.ps1            启动 TUI
-        .\start.ps1 -Check     只校验运行环境、配置和依赖
-        .\start.ps1 -Help      查看帮助
-
-    说明：
-        - 自动查找 Python 3.10+（优先 py -3，可用环境变量 PYTHON 覆盖）
-        - 在项目目录下创建 .venv 并安装 requirement 依赖
-        - 校验 configure/config.json 的必填项后启动 tui/main.py
-#>
 param(
     [switch]$Check,
     [switch]$Help
@@ -19,7 +7,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# 保证中文提示与 Python 子进程输出使用 UTF-8
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $env:PYTHONUTF8 = '1'
 $env:PYTHONIOENCODING = 'utf-8'
@@ -50,7 +37,6 @@ function Write-Step {
     Write-Host $Message
 }
 
-# 查找可用的 Python 3.10+ 解释器
 function Find-Python {
     $candidates = @()
     if (-not [string]::IsNullOrWhiteSpace($env:PYTHON)) {
@@ -81,7 +67,6 @@ function Find-Python {
     return $false
 }
 
-# 校验配置文件：必须是 JSON 对象，且包含 apikey / baseurl / modelname
 function Test-Config {
     param([Parameter(Mandatory = $true)][string]$Path)
 

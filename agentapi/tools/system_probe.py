@@ -11,7 +11,6 @@ class SystemProbe(hotplug_tool):
         def _collect():
             info = {}
 
-            # --- OS ---
             uname = platform.uname()
             info["os"] = {
                 "system": uname.system,
@@ -31,7 +30,6 @@ class SystemProbe(hotplug_tool):
             except Exception:
                 pass
 
-            # --- Python ---
             info["python"] = {
                 "version": sys.version,
                 "executable": sys.executable,
@@ -39,7 +37,6 @@ class SystemProbe(hotplug_tool):
                 "byteorder": sys.byteorder,
             }
 
-            # --- Hardware ---
             hw = {}
             try:
                 hw["cpu_count"] = os.cpu_count()
@@ -64,7 +61,6 @@ class SystemProbe(hotplug_tool):
                 pass
             info["hardware"] = hw
 
-            # --- Env (筛选，避免泄露全部敏感值) ---
             keys = ["PATH", "HOME", "USER", "SHELL", "LANG", "PWD", "VIRTUAL_ENV", "PYTHONPATH"]
             info["env"] = {k: os.environ.get(k) for k in keys if k in os.environ}
             info["env_all_count"] = len(os.environ)

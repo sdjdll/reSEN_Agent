@@ -32,10 +32,8 @@ class SshRun(hotplug_tool):
                         out[name] = txt[:4000] if "id_ed25519" not in name else "(private key, not shown; exists, mode=%o)" % (os.stat(p).st_mode & 0o777)
                     except Exception as e:
                         out[name] = "err: " + str(e)
-            # ssh-agent keys
             rc, so, se = sh("ssh-add -l")
             out["ssh_add_l"] = {"rc": rc, "out": so.strip(), "err": se.strip()}
-            # agent dir
             ad = os.path.join(sshdir, "agent")
             if os.path.isdir(ad):
                 out["agent_dir"] = sorted(os.listdir(ad))

@@ -21,7 +21,6 @@ class NetInfo(hotplug_tool):
         except Exception as e:
             info["addr_err"] = str(e)
 
-        # 出口 IP（连一个不可达/公网地址，取本地端地址；不会真发数据）
         for probe in ("10.10.10.100", "8.8.8.8", "1.1.1.1"):
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
@@ -34,7 +33,6 @@ class NetInfo(hotplug_tool):
 
         info["ips"] = sorted(ips)
 
-        # 读 /proc/net 里的地址（只读）
         try:
             info["if_inet"] = open("/proc/net/fib_trie").read().count("10.10.10.100")
         except Exception:

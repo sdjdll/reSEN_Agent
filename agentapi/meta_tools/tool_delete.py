@@ -5,11 +5,6 @@ from .interface.meta_tool import meta_tool
 
 
 class tool_delete(meta_tool):
-    """元工具：删除 tools/ 下的一个工具模块。
-
-    meta_tool 本身不热插拔，而是把维护好的 schema 硬加载进上下文提示词，
-    让模型能以 function calling 的方式调用本工具。
-    """
 
     def __init__(self) -> None:
         self.schema += [{
@@ -44,7 +39,6 @@ class tool_delete(meta_tool):
             raise FileNotFoundError(f"{module_path} does not exist.")
 
         module_path.unlink()
-        # 顺带清理可能的字节码缓存
         for cached in (TOOLS_DIR / "__pycache__").glob(f"{name}*.pyc"):
             cached.unlink()
 
@@ -54,5 +48,4 @@ class tool_delete(meta_tool):
             "message": f"Tool {name!r} deleted.",
         }
 
-# 模块级单例：导入时注册 schema 一次，运行期复用
 tool = tool_delete()

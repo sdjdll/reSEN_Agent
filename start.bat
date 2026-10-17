@@ -6,17 +6,12 @@ setlocal EnableExtensions
 
 
 
-rem reSEN Agent 启动入口（Windows / 纯 cmd 实现，不依赖 PowerShell）
-
-rem 用法：start.bat           启动 TUI
-
-rem       start.bat --check   只校验运行环境、配置和依赖
-
-rem       start.bat --help    查看帮助
 
 
 
-rem ---------- 解析参数 ----------
+
+
+
 
 set "CHECK="
 
@@ -52,7 +47,6 @@ if not "%~2"=="" (
 
 
 
-rem ---------- 路径与环境 ----------
 
 set "ROOT=%~dp0"
 
@@ -92,7 +86,6 @@ if not exist "%CONFIG%" goto :err_no_config
 
 
 
-rem 依次尝试：环境变量 PYTHON -> py -3 -> python -> python3（均要求 3.10+）
 
 if defined PYTHON goto :py_from_env
 

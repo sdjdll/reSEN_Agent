@@ -5,9 +5,7 @@ from openai import AsyncOpenAI as openai
 from openai.types.chat import ChatCompletionMessageParam as ccmp, ChatCompletionMessage as ccm, ChatCompletionToolParam as cctp
 from openai.lib.streaming.chat import AsyncChatCompletionStreamManager
 from .meta_tools import get_schemas as getschemas
-# import meta_tools.tool_run as tool_runner
 from .meta_tools.tool_run import tool as tool_runner
-# print("Loaded meta_tools schemas:", meta_tools_schemas)
 
 role = Literal["assistant","developer","function","system","tool","user","latest_reminder",None]
 
@@ -32,16 +30,13 @@ class agent_api:
         self.__stopped = False
 
     def stop(self) -> None:
-        """置位中止标记：正在进行的批量工具调用不再执行后续工具。"""
         self.__stopped = True
 
     def resume(self) -> None:
-        """复位中止标记（新一轮对话开始时调用）。"""
         self.__stopped = False
 
     @property
     def stopped(self) -> bool:
-        """是否已被中止。"""
         return self.__stopped
 
     @property
@@ -57,7 +52,7 @@ class agent_api:
             messages=usrmsg,
             tools=self.get_schemas(),
             reasoning_effort=reasioning_effort,
-            extra_body=extra  # 非标准参数（如 thinking）只能这样进请求体
+            extra_body=extra
         )
         return _from_message(res.choices[0].message)
 
@@ -67,8 +62,8 @@ class agent_api:
             messages=usrmsg,
             tools=self.get_schemas(),
             reasoning_effort=reasoning_effort,
-            extra_body=extra,  # 非标准参数（如 thinking）只能这样进请求体
-            stream_options={"include_usage": True}  # 最后一个 chunk 带 usage，供上下文容量显示
+            extra_body=extra,
+            stream_options={"include_usage": True}
         )
 
     def tool(self, message: ccmp) -> list[ccmp]:
@@ -76,7 +71,6 @@ class agent_api:
         results: list[ccmp] = []
         for call in calls:
             if self.__stopped:
-                # 已中止：剩下的工具一个都不执行，只回一条结果保持消息链完整
                 results.append(cast(ccmp, {"role": "tool", "tool_call_id": call["id"], "content": "对话已中止，工具未执行"}))
                 continue
             if call["type"] != "function":
@@ -98,13 +92,11 @@ class agent_api:
         return cast(list[cctp],getschemas())
 
     def deny(self, message: ccmp, reason: str = "用户拒绝工具调用") -> list[ccmp]:
-        """不执行工具，统一把 reason 作为每个 tool_call 的结果返回。"""
         return [
             cast(ccmp, {"role": "tool", "tool_call_id": call["id"], "content": reason})
             for call in (message.get("tool_calls") or [])
         ]
 
     async def models(self) -> list[str]:
-        """向服务端现取可用模型名列表。"""
         res = await self.__model.models.list()
         return [m.id for m in res.data]

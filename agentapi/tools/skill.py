@@ -9,9 +9,7 @@ class Skill(hotplug_tool):
         import os, re, json
         from datetime import datetime
 
-        # 相对根目录：reSEN_Agent（默认位于项目目录下；可用 RESEN_ROOT 覆盖根）
         ROOT = os.environ.get("RESEN_ROOT") or "/home/sdjini/Projects/reSEN-Agent"
-        # 工具内部一律使用相对根目录的相对路径
         REL_DIR = "skills"
         SKILLS_DIR = os.path.join(ROOT, REL_DIR)
 
@@ -132,7 +130,6 @@ class Skill(hotplug_tool):
                 os.remove(path)
                 return json.dumps({"deleted": os.path.join(REL_DIR, slug + ".md")}, ensure_ascii=False)
 
-            # update
             s = _parse(path)
             new_name = name or s.get("name", slug)
             new_desc = kwargs.get("description", s.get("description", ""))

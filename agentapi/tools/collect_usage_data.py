@@ -21,16 +21,13 @@ class CollectUsageData(hotplug_tool):
 
         out = {}
 
-        # ---------- Shell history ----------
         if inc in ("shell", "all"):
             hist = {}
-            # bash
             try:
                 with open(os.path.join(home, ".bash_history"), errors="ignore") as f:
                     lines = [l.strip() for l in f if l.strip()]
                 cmds = Counter()
                 for l in lines:
-                    # skip timestamps like "#1697000000"
                     if l.startswith("#"):
                         continue
                     base = l.split()[0] if l.split() else l
@@ -41,7 +38,6 @@ class CollectUsageData(hotplug_tool):
                 }
             except FileNotFoundError:
                 hist["bash"] = "not found"
-            # zsh
             zh = os.path.join(home, ".zsh_history")
             if os.path.exists(zh):
                 try:
@@ -49,7 +45,6 @@ class CollectUsageData(hotplug_tool):
                         zlines = [l.strip() for l in f if l.strip()]
                     zcmds = Counter()
                     for l in zlines:
-                        # zsh extended format: ": 1697000000:0;cmd"
                         m = re.match(r"^:\s*(\d+):\d+;(.*)$", l)
                         body = m.group(2) if m else l
                         if body.split():
@@ -59,7 +54,6 @@ class CollectUsageData(hotplug_tool):
                     hist["zsh"] = f"error: {e}"
             out["shell_history"] = hist
 
-        # ---------- Sessions (last/wtmp) ----------
         if inc in ("sessions", "all"):
             last = run(["last", "-n", "50", "-F"])
             logins = []
@@ -74,13 +68,12 @@ class CollectUsageData(hotplug_tool):
                 "boots_tail": boots.strip().splitlines()[-15:],
             }
 
-        # ---------- File activity by hour ----------
         if inc in ("files", "all"):
             hour_counter = Counter()
             dow_counter = Counter()
             ext_counter = Counter()
             scanned = 0
-            cutoff = datetime.now().timestamp() - 60 * 60 * 24 * 30  # last 30 days
+            cutoff = datetime.now().timestamp() - 60 * 60 * 24 * 30
             skip_dirs = {".cache", ".git", "node_modules", ".venv", "venv", "site-packages", ".mozilla", ".config"}
             for root, dirs, files in os.walk(home):
                 dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".cache")]
@@ -109,20 +102,15 @@ class CollectUsageData(hotplug_tool):
                 "top_extensions": ext_counter.most_common(15),
             }
 
-        # ---------- Apps ----------
         if inc in ("apps", "all"):
             apps = {}
-            # running processes top by name
             ps = run(["ps", "-eo", "comm", "--no-headers"])
             pc = Counter(l.strip() for l in ps.splitlines() if l.strip())
             apps["top_process_comm"] = pc.most_common(25)
-            # installed pacman packages count + recently installed
             apps["pacman_explicit_count"] = run(["bash", "-lc", "pacman -Qe 2>/dev/null | wc -l"]).strip()
             apps["pacman_recent"] = run(["bash", "-lc", "grep -E 'installed|upgraded' /var/log/pacman.log 2>/dev/null | tail -15"]).strip().splitlines()
-            # desktop entries (GUI apps available)
             de = run(["bash", "-lc", "ls /usr/share/applications/*.desktop 2>/dev/null | wc -l"]).strip()
             apps["desktop_entries_count"] = de
-            # systemd user units enabled (autostart-ish)
             apps["user_units_enabled"] = run(["bash", "-lc", "systemctl --user list-unit-files --state=enabled --no-pager 2>/dev/null | head -20"]).strip().splitlines()
             out["apps"] = apps
 

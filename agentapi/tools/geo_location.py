@@ -12,7 +12,6 @@ class GeoLocation(hotplug_tool):
 
         if method == "local":
             result = {"method": "local", "source": "system timezone/config"}
-            # timezone
             try:
                 with open("/etc/timezone") as f:
                     result["timezone"] = f.read().strip()
@@ -21,9 +20,7 @@ class GeoLocation(hotplug_tool):
                     result["timezone"] = os.path.realpath("/etc/localtime").split("zoneinfo/")[-1]
                 except Exception:
                     pass
-            # locale
             result["locale"] = os.environ.get("LANG")
-            # timedatectl if available
             try:
                 out = subprocess.run(["timedatectl", "show", "--property=Timezone", "--property=LocalRTC"],
                                      capture_output=True, text=True, timeout=5).stdout.strip()
