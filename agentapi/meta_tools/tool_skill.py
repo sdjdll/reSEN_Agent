@@ -1,9 +1,9 @@
-from agentapi.meta_tools.interface.hotplug_tool import hotplug_tool
+from .interface.meta_tool import meta_tool
 
 
-class Skill(hotplug_tool):
-    def get_schema(self) -> dict:
-        return {'type': 'function', 'function': {'name': 'skill', 'description': '技能库管理工具：把可复用的技能/流程以 Markdown（YAML frontmatter: name/description/tags/created/updated）形式存于 reSEN_Agent 根目录下的相对路径 skills/ 中，支持 list/create/read/update/delete/search 六种操作。', 'parameters': {'properties': {'action': {'description': '操作类型: list 列出全部技能 / create 新建技能 / read 读取技能全文 / update 更新技能 / delete 删除技能 / search 按关键词检索', 'enum': ['list', 'create', 'read', 'update', 'delete', 'search'], 'type': 'string'}, 'content': {'description': '技能正文，Markdown（create/update）', 'type': 'string'}, 'description': {'description': '技能一句话描述（create/update）', 'type': 'string'}, 'keyword': {'description': 'search 的检索关键词,匹配 name/description/tags/content', 'type': 'string'}, 'name': {'description': '技能名（create 必填；read/update/delete 用 name 或 slug 定位）', 'type': 'string'}, 'overwrite': {'description': 'create 时若同名技能已存在是否覆盖，默认 false', 'type': 'boolean'}, 'slug': {'description': '技能文件名（不含 .md），用于定位已有技能；缺省时由 name 推导', 'type': 'string'}, 'tags': {'description': '标签列表（create/update）', 'items': {'type': 'string'}, 'type': 'array'}}, 'required': ['action'], 'type': 'object'}}}
+class tool_skill(meta_tool):
+    def __init__(self) -> None:
+        self.schema += [{'type': 'function', 'function': {'name': 'tool_skill', 'description': '技能库管理工具：把可复用的技能/流程以 Markdown（YAML frontmatter: name/description/tags/created/updated）形式存于 reSEN_Agent 根目录下的相对路径 skills/ 中，支持 list/create/read/update/delete/search 六种操作。', 'parameters': {'properties': {'action': {'description': '操作类型: list 列出全部技能 / create 新建技能 / read 读取技能全文 / update 更新技能 / delete 删除技能 / search 按关键词检索', 'enum': ['list', 'create', 'read', 'update', 'delete', 'search'], 'type': 'string'}, 'content': {'description': '技能正文，Markdown（create/update）', 'type': 'string'}, 'description': {'description': '技能一句话描述（create/update）', 'type': 'string'}, 'keyword': {'description': 'search 的检索关键词,匹配 name/description/tags/content', 'type': 'string'}, 'name': {'description': '技能名（create 必填；read/update/delete 用 name 或 slug 定位）', 'type': 'string'}, 'overwrite': {'description': 'create 时若同名技能已存在是否覆盖，默认 false', 'type': 'boolean'}, 'slug': {'description': '技能文件名（不含 .md），用于定位已有技能；缺省时由 name 推导', 'type': 'string'}, 'tags': {'description': '标签列表（create/update）', 'items': {'type': 'string'}, 'type': 'array'}}, 'required': ['action'], 'type': 'object'}}}]
 
     def run(self, *args, **kwargs):
         import os, re, json
@@ -141,3 +141,5 @@ class Skill(hotplug_tool):
                               ensure_ascii=False)
 
         return json.dumps({"error": f"未知 action: {action}"}, ensure_ascii=False)
+
+tool = tool_skill()
