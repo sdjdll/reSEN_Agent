@@ -1,0 +1,14 @@
+{
+    "apikey": "NO-APIKEY",
+    "baseurl": "NO-BASEURL",
+    "modelname": "deepseek-flash",
+    "access_key": "test_key",
+    "config": {
+        "reasoning_effort": "minimal",
+        "context_limit": 128000000,
+        "extra": [
+            {"thinking": {"type": "enabled"}},
+            {"thinking": {"type": "disabled"}}
+        ]
+    }
+}

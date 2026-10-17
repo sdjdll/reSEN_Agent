@@ -1,0 +1,4 @@
+{"time": "2026-10-16 08:53:57", "action": "set", "key": "user.machine", "old": null, "new": "主力机为 Arch Linux 笔记本 sdjini-Laptop-arch", "reason": "来源:自检对话"}
+{"time": "2026-10-16 08:54:02", "action": "set", "key": "demo.tmp", "old": null, "new": "旧值", "reason": ""}
+{"time": "2026-10-16 08:54:04", "action": "update", "key": "demo.tmp", "old": "旧值", "new": "新值", "reason": "仅为演示：原值已过期"}
+{"time": "2026-10-16 08:54:04", "action": "delete", "key": "demo.tmp", "old": "新值", "new": null, "reason": "演示结束，该条目不再需要"}

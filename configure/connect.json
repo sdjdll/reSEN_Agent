@@ -1,0 +1,29 @@
+[
+    {
+        "name": "peer-102",
+        "desc": "Peer agent at 10.10.10.102",
+        "host": "10.10.10.102",
+        "port": "1124",
+        "tag": []
+    },
+    {
+        "name": "termux-101",
+        "desc": "10.10.10.101 上的 peer agent（连通性测试）",
+        "host": "10.10.10.101",
+        "port": "1124",
+        "tag": [
+            "test",
+            "peer"
+        ]
+    },
+    {
+        "name": "peer-100",
+        "desc": "10.10.10.100 上的 peer agent（连通性测试）",
+        "host": "10.10.10.100",
+        "port": "1124",
+        "tag": [
+            "test",
+            "peer"
+        ]
+    }
+]
