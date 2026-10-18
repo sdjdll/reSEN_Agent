@@ -130,7 +130,7 @@ python -m venv .venv
 
 ### 热插拔工具
 
-位于 `agentapi/tools/`，必须继承 `hotplug_tool` 并实现 `get_schema()` 与 `run()`：
+位于 `agentapi/tools/`，由 AI 在运行期按需生成，也可以手动添加。必须继承 `hotplug_tool` 并实现 `get_schema()` 与 `run()`：
 
 ```python
 from agentapi.meta_tools.interface.hotplug_tool import hotplug_tool
@@ -150,24 +150,12 @@ class CurrentTime(hotplug_tool):
         ...
 ```
 
-内置工具：
+工具目录是动态的：
 
-| 工具 | 作用 |
-| --- | --- |
-| `current_time` | 当前日期、时间、时间戳、时区 |
-| `weather` | 按经纬度查询天气（Open-Meteo，无需 Key） |
-| `geo_location` | 本地时区推断或公网 IP 定位 |
-| `net_info` | 主机名、网卡 IP、出口 IP |
-| `system_probe` | 系统、Python、硬件、环境变量信息 |
-| `local_sh` | 本机执行 shell 命令 |
-| `ssh_run` | 查看本机 SSH 配置 / 远程执行命令 |
-| `raw_http` | 发送原始 HTTP 请求并打印原始响应 |
-| `inspect_env` | 目录/文件检查、端口探测、HTTP 探测 |
-| `atspi_probe` | 通过 AT-SPI 读取 Linux 桌面可访问性元素树 |
-| `xdo` | X11 鼠标/键盘注入、剪贴板粘贴 |
-| `memory` | 双模记忆管理 |
-| `collect_usage_data` | 采集本机使用习惯聚合数据 |
-| `write_summary_md` | 写入 `~/temp/` 下的 Markdown 总结 |
+- `agentapi/tools/` 由 AI 通过 `tool_create` / `tool_delete` 在运行期增删，**目录为空是正常状态**，不代表功能缺失
+- 工具无需预先注册；`tool_run` 按名称即时加载并执行
+- 调用前可用 `tool_search` 查看当前已有工具，用 `tool_view` 查看其 schema 与源码
+- `tool_create` 会生成继承 `hotplug_tool` 的模块，并在落盘前做语法校验
 
 ## 记忆与技能
 
@@ -212,7 +200,7 @@ agentapi/
   agentapi.py          OpenAI 接口封装（chat / chat_stream / tool / deny / models）
   core.py              会话、配置、记忆、上下文压缩、流式渲染
   meta_tools/          元工具与工具接口
-  tools/               热插拔工具
+  tools/               热插拔工具（运行期动态生成，可为空）
 api/
   peer_api.py          peer HTTP 服务端与客户端
 tui/
@@ -229,9 +217,8 @@ start.sh / start.ps1 / start.bat
 
 ## 安全提示
 
-- `local_sh`、`ssh_run`、`xdo`、`raw_http` 等工具能力很强，请只在可信环境中使用
+- 动态生成的工具可能具备执行 shell、SSH、桌面注入、网络请求等高危能力；执行前请用 `tool_view` 检查其 schema 与源码，并只在可信环境中使用
 - `peer_agent` 会把内容发送到指定主机，只连接你信任的 peer；务必设置非空 `access_key`
-- `configure/config.json` 含明文 API Key，请勿提交到公开仓库
 - 仓库已忽略 `__pycache__/` 与 `*.pyc`
 
 ## 许可证
