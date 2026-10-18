@@ -173,10 +173,11 @@ class main(App):
         self._stop_peer()
 
     def _watch_signals(self) -> None:
-        for sig in (signal.SIGHUP, signal.SIGTERM):
+        # 按名字取信号：Windows 没有 SIGHUP，直接写属性会在 try 之外抛 AttributeError
+        for name in ("SIGHUP", "SIGTERM"):
             try:
-                signal.signal(sig, self._flush_and_die)
-            except (ValueError, OSError):
+                signal.signal(getattr(signal, name), self._flush_and_die)
+            except (AttributeError, ValueError, OSError):
                 pass
 
     def _flush_and_die(self, signum: int, frame: object) -> None:
