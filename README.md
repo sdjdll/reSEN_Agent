@@ -217,7 +217,7 @@ start.sh / start.ps1 / start.bat
 
 ## 安全提示
 
-- 动态生成的工具可能具备执行 shell、SSH、桌面注入、网络请求等高危能力；执行前请用 `tool_view` 检查其 schema 与源码，并只在可信环境中使用
+- 动态生成的工具可能具备执行 shell、SSH、桌面注入、网络请求等高危能力；
 - `peer_agent` 会把内容发送到指定主机，只连接你信任的 peer；务必设置非空 `access_key`
 - 仓库已忽略 `__pycache__/` 与 `*.pyc`
 
