@@ -56,8 +56,6 @@ set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 set "REQ=%ROOT%requirement"
 
-set "CONFIG=%ROOT%configure\config.json"
-
 
 
 set "PYTHONUTF8=1"
@@ -78,12 +76,9 @@ if errorlevel 1 (
 
 
 
-echo [1/5] 检查运行环境
+echo [1/4] 检查运行环境
 
 if not exist "%REQ%"    goto :err_no_req
-
-if not exist "%CONFIG%" goto :err_no_config
-
 
 
 
@@ -151,15 +146,7 @@ set "BASE_ARGS="
 
 
 
-echo [2/5] 校验配置文件
-
-"%BASE_PY%" %BASE_ARGS% -c "import json,sys;c=json.load(open(sys.argv[1],encoding='utf-8-sig'));ok=isinstance(c,dict) and all(isinstance(c.get(k),str) and c.get(k).strip() for k in ('apikey','baseurl','modelname'));sys.exit(0 if ok else 2)" "%CONFIG%"
-
-if errorlevel 1 goto :err_config
-
-
-
-echo [3/5] 创建并安装虚拟环境依赖
+echo [2/4] 创建并安装虚拟环境依赖
 
 if exist "%VENV_PY%" goto :venv_ready
 
@@ -177,7 +164,7 @@ if errorlevel 1 goto :err_pip
 
 
 
-echo [4/5] 验证依赖
+echo [3/4] 验证依赖
 
 "%VENV_PY%" -m pip check
 
@@ -193,7 +180,7 @@ if defined CHECK goto :checked
 
 
 
-echo [5/5] 启动 reSEN Agent
+echo [4/4] 启动 reSEN Agent
 
 "%VENV_PY%" "%ROOT%tui\main.py"
 
@@ -219,7 +206,7 @@ exit /b 0
 
 echo 用法：start.bat [--check] [--help]
 
-echo   --check  只校验运行环境、配置和依赖，不启动 TUI
+echo   --check  只校验运行环境和依赖，不启动 TUI
 
 echo   --help   显示本帮助
 
@@ -235,25 +222,9 @@ goto :fail
 
 
 
-:err_no_config
-
-echo 错误：配置文件不存在：%CONFIG%
-
-goto :fail
-
-
-
 :err_no_python
 
 echo 错误：找不到 Python 3.10 或更高版本，请安装后重试（也可用环境变量 PYTHON 指定解释器）
-
-goto :fail
-
-
-
-:err_config
-
-echo 错误：配置文件无效，需为 JSON 对象且包含非空的 apikey / baseurl / modelname
 
 goto :fail
 

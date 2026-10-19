@@ -28,7 +28,7 @@
 
 ### 2. 配置
 
-编辑 `configure/config.json`：
+`configure/` 目录为动态目录，首次启动时会自动创建并生成默认的 `configure/config.json`；随后编辑该文件：
 
 ```json
 {
@@ -67,7 +67,7 @@
 
 ```bash
 ./start.sh          # 自动创建 .venv、安装依赖并启动
-./start.sh --check  # 只校验环境、配置与依赖
+./start.sh --check  # 只校验环境和依赖
 ```
 
 可用环境变量 `PYTHON` 指定解释器，例如 `PYTHON=python3.12 ./start.sh`。
