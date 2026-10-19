@@ -1,3 +1,6 @@
+[api](/api/readme.md)文档待人工重写
+[README](/README.md)该文档待人工重写
+
 # reSEN-Agent
 
 基于 OpenAI 兼容接口的终端 AI Agent：Textual TUI + 可热插拔工具 + 多会话长期记忆 + 局域网 peer 协同。

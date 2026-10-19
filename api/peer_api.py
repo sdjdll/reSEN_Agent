@@ -17,7 +17,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from agentapi.agentapi import agent_api
 from file.dick import dick
 from file.jsonfile import jsonfile
-
+""" todolist
+    todo: http -> https
+    todo: 自定义网段/端口
+"""
 _CONFIG = Path(__file__).resolve().parents[1] / "configure" / "config.json"
 _CONNECT = Path(__file__).resolve().parents[1] / "configure" / "connect.json"
 
