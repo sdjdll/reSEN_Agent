@@ -7,7 +7,7 @@ from openai.lib.streaming.chat import AsyncChatCompletionStreamManager
 from .meta_tools import get_schemas as getschemas
 from .meta_tools.tool_run import tool as tool_runner
 
-role = Literal["assistant","developer","function","system","tool","user","latest_reminder",None]
+role = Literal["assistant","developer","function","system","tool","user","latest_reminder"]
 
 def _from_message(message: ccm) -> ccmp:
     msg: dict[str, Any] = {"role": "assistant"}
@@ -100,3 +100,6 @@ class agent_api:
     async def models(self) -> list[str]:
         res = await self.__model.models.list()
         return [m.id for m in res.data]
+
+    async def balance(self) -> dict[str, Any]:
+        return cast(dict[str, Any], await self.__model.get("/user/balance", cast_to=dict))

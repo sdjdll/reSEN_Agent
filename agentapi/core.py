@@ -142,6 +142,12 @@ class core:
         except Exception:
             return [self.model()]
 
+    @_guarded
+    async def balance(self) -> str:
+        info = (await self._client.balance())["balance_infos"][0]
+        unit = {"CNY": "¥", "USD": "$"}.get(info["currency"], info["currency"] + " ")
+        return f"{unit}{info['total_balance']}"
+
     def set_model(self, name: str) -> None:
         self._client.model_name = name
         self._dick.set("modelname", name)

@@ -1,4 +1,6 @@
 {
-    "current": "默认会话",
-    "memory": {}
+    "current": "会话1",
+    "memory": {
+        "会话1": []
+    }
 }

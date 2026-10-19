@@ -44,7 +44,7 @@ class tool_run(meta_tool):
                     "Run a tool by name. The target may be a meta tool (meta_tools) or "
                     "a hot-pluggable module under tools/. Arguments can be given either "
                     "as a keyword object ('arguments') or a positional array ('args'). "
-                    "This meta tool will run any tools, can cause a disastrous consequences, KEEP TOOL SAFE."
+                    "This meta tool will run any tools, can cause a disastrous consequences, KEEP SAFE. Make sure all the actions are rollbackable and remind user."
                 ),
                 "parameters": {
                     "type": "object",

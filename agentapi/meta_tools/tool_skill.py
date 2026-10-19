@@ -73,7 +73,7 @@ class tool_skill(meta_tool):
 
         action = kwargs.get("action", "list")
         name = kwargs.get("name")
-        slug = kwargs.get("slug") or (_slugify(name) if name else None)
+        slug = kwargs.get("slug") or (_slugify(name) if name else "")
 
         if action == "list":
             skills = _list_skills()

@@ -117,6 +117,7 @@ class main(App):
             Static("^q 退出  ^p 命令  f2 设置  ↑↓ 历史", id="Ft_Keys"),            Clickable(self._core.model(), self._cycle_model, id="Ft_Model"),
             Clickable(self._core.effort(), self._cycle_effort, id="Ft_Effort"),
             Clickable(_extralabel(self._core.extra()), self._cycle_extra, id="Ft_Extra"),
+            Static("余额 …", id="Ft_Balance"),
             Clickable("", self._compress, id="Ft_Context"),
             id="FooterRow",
         )
@@ -244,6 +245,14 @@ class main(App):
     def _show_usage(self) -> None:
         used, limit = self._core.usage()
         self.query_one("#Ft_Context", Static).update(f"ctx {_ktok(used)}/{_ktok(limit)}")
+        self.run_worker(self._refresh_balance())
+
+    async def _refresh_balance(self) -> None:
+        try:
+            text = await self._core.balance()
+        except agent_error:
+            text = "?"
+        self.query_one("#Ft_Balance", Static).update(f"余额 {text}")
 
     def refresh_settings(self) -> None:
         self.query_one("#Ft_Model", Static).update(self._core.model())
