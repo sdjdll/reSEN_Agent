@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import api.peer_api as peer_api
 from agentapi.core import agent_error, core
 from file.dick import dick
+from file.jsonfile import jsonfile
 from setpanel import (Confirm, PeerProvider, SessionProvider, SettingProvider, SettingsScreen,
                       prompt_new_session)
 
@@ -42,6 +43,23 @@ def _ktok(n: int | None) -> str:
 
 def _extralabel(extra: dict[str, Any]) -> str:
     return json.dumps(extra, ensure_ascii=False, separators=(",", ":"))
+
+_DEFAULT_CONFIG: dict[str, Any] = {
+    "apikey": "",
+    "baseurl": "https://api.deepseek.com",
+    "modelname": "deepseek-chat",
+    "access_key": peer_api.NO_ACCESS_KEY,
+    "config": {
+        "reasoning_effort": "medium",
+        "context_limit": 128000,
+        "peer_serve": False,
+        "peer_tools": True,
+        "extra": [
+            {"thinking": {"type": "enabled"}},
+            {"thinking": {"type": "disabled"}},
+        ],
+    },
+}
 
 class Clickable(Static):
 
@@ -88,7 +106,12 @@ class main(App):
 
     def __init__(self):
         super().__init__()
-        self._cfg = dick(str(Path(__file__).resolve().parent.parent / "configure" / "config.json"))
+        cfgpath = Path(__file__).resolve().parent.parent / "configure" / "config.json"
+        if not cfgpath.exists():
+            cfgpath.parent.mkdir(parents=True, exist_ok=True)
+            jsonfile(str(cfgpath)).write(_DEFAULT_CONFIG)
+            raise agent_error(f"配置文件不存在，已创建默认配置：{cfgpath}（请填写 apikey/baseurl/modelname 后重新启动）")
+        self._cfg = dick(str(cfgpath))
         self._core = core(self._cfg.str("apikey"), self._cfg.str("baseurl"), self._cfg.str("modelname"))
         self._sync_title()
 
@@ -470,7 +493,10 @@ class ComplateMessage(Container):
 
 
 if __name__ == "__main__":
-    mainapp = main()
+    try:
+        mainapp = main()
+    except agent_error as e:
+        sys.exit(f"⚠ {e}")
     try:
         mainapp.run()
     finally:
