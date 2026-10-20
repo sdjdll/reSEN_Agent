@@ -98,6 +98,7 @@ class main(App):
     _cfg: dick
     _EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max")
     _allow_all: bool = False
+    _allow_turn: bool = False
     _count: int = 0
     _busy: bool = False
     _worker: Worker[None] | None = None
@@ -353,6 +354,7 @@ class main(App):
         if self._busy or not ipt.value:
             return
         usrmsg, ipt.value = ipt.value, ""
+        self._allow_turn = False
         self._set_busy(True)
         self._launch(self._turn(self._watch(self._core.stream(usrmsg))))
 
@@ -382,7 +384,7 @@ class main(App):
             raise
         finally:
             self._worker = None
-            if self.is_running and not list(self.query(ToolCall)):
+            if self.is_running and not any(card.pending for card in self.query(ToolCall)):
                 self._set_busy(False)
 
     async def _abort(self) -> None:
@@ -425,17 +427,18 @@ class main(App):
         self._show_usage()
         if reply is None:
             return
-        if self._allow_all:
+        if self._allow_all or self._allow_turn:
             await self._tools(reply)
             return
-        def act(allow: bool, all_: bool = False) -> FunctionType:
+        def act(allow: bool, turn: bool = False, all_: bool = False) -> FunctionType:
             def action(_args: list) -> None:
+                self._allow_turn = self._allow_turn or turn
                 self._allow_all = self._allow_all or all_
                 self._launch(self._turn(self._tools(reply, not allow)))
             return action
         await self.query_one("#History", HistoryScroll).mount(ToolCall(
-            _toolmsg(reply), [act(True), act(True, True), act(False)], [], id=self._newid("tc"),
-            markup=False,
+            _toolmsg(reply), [act(True), act(True, turn=True), act(True, all_=True), act(False)],
+            [], id=self._newid("tc"), markup=False,
         ))
         self.query_one("#History", HistoryScroll).follow_end()
 
@@ -459,6 +462,7 @@ class ToolCall(Container):
     _action: list[FunctionType]
     _args: list
     _buttons: Horizontal
+    _decided: bool = False
 
     def __init__(self, toolcall_msg:str,action: list[FunctionType], args:list, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True) -> None:
         buttons = Horizontal(
@@ -478,14 +482,21 @@ class ToolCall(Container):
     async def on_button_pressed(self, event: Button.Pressed):
         if event.button.id == f"{self.id}y":
             self._action[0](self._args)
-        elif event.button.id == f"{self.id}a":
+        elif event.button.id == f"{self.id}t":
             self._action[1](self._args)
-        elif event.button.id == f"{self.id}n":
+        elif event.button.id == f"{self.id}a":
             self._action[2](self._args)
+        elif event.button.id == f"{self.id}n":
+            self._action[3](self._args)
         else:
             return
+        self._decided = True
         # 只收起按钮，保留工具调用内容（参数）在历史里可查
         await self._buttons.remove()
+
+    @property
+    def pending(self) -> bool:
+        return not self._decided
 
 class HistoryScroll(VerticalScroll):
 
