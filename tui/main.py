@@ -36,10 +36,17 @@ def _toolmsg(reply: ccmp) -> str:
         for call in calls
     )
 
+_CTX_UNITS = ("", "K", "M", "B", "T", "P", "E")
+
 def _ktok(n: int | None) -> str:
+    """动态单位：999 / 1K / 128K / 1M / 2.3B / 1.2T …"""
     if n is None:
         return "?"
-    return str(n) if n < 1000 else f"{n / 1000:.1f}".rstrip("0").rstrip(".") + "k"
+    value, unit = float(n), 0
+    while unit < len(_CTX_UNITS) - 1 and round(value, 1) >= 1000:
+        value /= 1000
+        unit += 1
+    return f"{value:.1f}".rstrip("0").rstrip(".") + _CTX_UNITS[unit]
 
 def _extralabel(extra: dict[str, Any]) -> str:
     return json.dumps(extra, ensure_ascii=False, separators=(",", ":"))
