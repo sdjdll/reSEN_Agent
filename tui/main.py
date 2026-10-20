@@ -458,18 +458,23 @@ class ToolCall(Container):
 
     _action: list[FunctionType]
     _args: list
+    _buttons: Horizontal
+
     def __init__(self, toolcall_msg:str,action: list[FunctionType], args:list, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True) -> None:
+        buttons = Horizontal(
+            Button("Allow",id=f"{id}y"),
+            Button("Allow This",id=f"{id}t"),
+            Button("Allow All",id=f"{id}a"),
+            Button("Deny", id=f"{id}n")
+        )
         super().__init__(
             Static(toolcall_msg, markup=markup),
-            Horizontal(
-                Button("Allow",id=f"{id}y"),
-                Button("Allow All",id=f"{id}a"),
-                Button("Deny", id=f"{id}n")
-            )
+            buttons
             ,name=name, id=id, classes=classes, disabled=disabled, markup=markup
         )
         self._action = action
         self._args = args
+        self._buttons = buttons
     async def on_button_pressed(self, event: Button.Pressed):
         if event.button.id == f"{self.id}y":
             self._action[0](self._args)
@@ -479,7 +484,8 @@ class ToolCall(Container):
             self._action[2](self._args)
         else:
             return
-        await self.remove()
+        # 只收起按钮，保留工具调用内容（参数）在历史里可查
+        await self._buttons.remove()
 
 class HistoryScroll(VerticalScroll):
 
