@@ -1,5 +1,4 @@
 import json
-from functools import partial
 from typing import Any, Awaitable, Callable, Protocol, cast
 
 from rich.text import Text
@@ -18,10 +17,8 @@ class Host(Protocol):
     core: core
     busy: bool
     peer_running: bool
-    peer_autostart: bool
 
     def toggle_peer(self) -> None: ...
-    def toggle_peer_autostart(self) -> None: ...
     def delete_session(self, name: str) -> None: ...
 
 
@@ -151,7 +148,7 @@ class SettingsScreen(Screen[None]):
     def compose(self):
         yield Header()
         yield DataTable(id="Tbl_Set", cursor_type="row", zebra_stripes=True)
-        yield Static("↑↓ 选行　enter 改值　r 刷新　esc 返回", id="Set_Hint")
+        yield Static("↑↓ 选行　enter 改值（自动识别 JSON 类型）　r 刷新　esc 返回", id="Set_Hint")
 
     def on_mount(self) -> None:
         self.query_one(DataTable).add_columns("项", "值", "类型")
@@ -176,35 +173,6 @@ class SettingsScreen(Screen[None]):
         if changed:
             _refresh(self.app, changed)
             self.action_reload()
-
-
-class SettingProvider(Provider):
-
-    def _lines(self) -> list[tuple[Text, str]]:
-        items = cast(Host, self.app).core.settings()
-        pad = max(len(path) for path, _ in items) + 2
-        return [(Text(f"{path:<{pad}}{_text(value)}"), path) for path, value in items]
-
-    def _run(self, path: str) -> Callable[[], None]:
-        def run() -> None:
-            host = self.app
-            engine = cast(Host, host).core
-            host.push_screen(
-                Prompt(f"set {path}", _text(dict(engine.settings())[path]),
-                       _submitter(lambda text: engine.set_setting(path, text))),
-                partial(_refresh, host),
-            )
-        return run
-
-    async def discover(self) -> Hits:
-        for line, path in self._lines():
-            yield DiscoveryHit(line, self._run(path), text=f"set {path}")
-
-    async def search(self, query: str) -> Hits:
-        matcher = self.matcher(query)
-        for line, path in self._lines():
-            if (score := matcher.match(f"set {path} {line.plain}")) > 0:
-                yield Hit(score, line, self._run(path), text=f"set {path}")
 
 
 class SessionProvider(Provider):
@@ -260,10 +228,8 @@ class PeerProvider(Provider):
     def _lines(self) -> list[tuple[str, Callable[[], None], str]]:
         host = cast(Host, self.app)
         serve = "peer 服务  运行中　回车关闭" if host.peer_running else "peer 服务  已停止　回车打开"
-        autostart = f"peer 开机自启  {'开' if host.peer_autostart else '关'}　回车切换"
         return [
             (serve, host.toggle_peer, "peer 服务 开关 启动 停止 拉起 peer_api"),
-            (autostart, host.toggle_peer_autostart, "peer 开机自启 配置 peer_serve 启动时"),
         ]
 
     async def discover(self) -> Hits:

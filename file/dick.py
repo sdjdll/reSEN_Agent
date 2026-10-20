@@ -24,6 +24,9 @@ class dick:
     def any(self,key:str,default:Any)->Any:
         return self.__data.get(key, default)
 
+    def items(self)->dict[str,Any]:
+        return dict(self.__data)
+
     def set(self,key:str,value:Any)->None:
         self.__data[key] = value
 

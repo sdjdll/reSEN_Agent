@@ -20,6 +20,10 @@ class agent_error(Exception):
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
+_CONFIG_KEYS = ("reasoning_effort", "think_collapsed", "context_limit", "peer_serve", "peer_tools", "extra")
+_SETTING_ORDER = ("apikey", "baseurl", "modelname", "access_key", *_CONFIG_KEYS)
+_RESERVED_KEYS = ("config", "memory", "current")
+
 def _guarded(fn: Callable[_P, Awaitable[_R]]) -> Callable[_P, Awaitable[_R]]:
     @wraps(fn)
     async def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -94,10 +98,25 @@ class core:
         self._memfile.set("current", self._current)
         self._memfile.update()
 
+    def _save_config(self) -> None:
+        for key in _CONFIG_KEYS:
+            if key in self._config:
+                self._dick.set(key, self._config[key])
+        self._dick.pop("config")
+        self._dick.update()
+
+    def _load_config(self) -> dict[str, Any]:
+        legacy = self._dick.any("config", None)
+        if isinstance(legacy, dict) and legacy:
+            for key, value in legacy.items():
+                self._dick.set(key, value)
+            self._dick.pop("config")
+            self._dick.update()
+        return {key: self._dick.any(key, None) for key in _CONFIG_KEYS if self._dick.any(key, None) is not None}
+
     def flush(self) -> None:
         try:
-            self._dick.set("config", self._config)
-            self._dick.update()
+            self._save_config()
         except Exception:
             pass
         try:
@@ -158,16 +177,14 @@ class core:
 
     def set_effort(self, effort: str) -> None:
         self._config["reasoning_effort"] = effort
-        self._dick.set("config", self._config)
-        self._dick.update()
+        self._save_config()
 
     def think_collapsed(self) -> bool:
         return bool(self._config.get("think_collapsed", True))
 
     def set_think_collapsed(self, collapsed: bool) -> None:
         self._config["think_collapsed"] = collapsed
-        self._dick.set("config", self._config)
-        self._dick.update()
+        self._save_config()
 
     def extras(self) -> list[dict[str, Any]]:
         extra = self._config.get("extra", {"thinking": {"type": "enabled"}})
@@ -184,18 +201,27 @@ class core:
         self._extra_index = index % len(self.extras())
 
     def settings(self) -> list[tuple[str, Any]]:
-        return [
-            ("apikey", self._dick.str("apikey")),
-            ("baseurl", self._dick.str("baseurl")),
-            ("modelname", self.model()),
-            ("access_key", self._dick.str("access_key", NO_ACCESS_KEY)),
-            ("config.reasoning_effort", self.effort()),
-            ("config.think_collapsed", self.think_collapsed()),
-            ("config.context_limit", self._config.get("context_limit", 128000)),
-            ("config.peer_serve", self.peer_serve()),
-            ("config.peer_tools", self._config.get("peer_tools", True)),
-            ("config.extra", self.extras()),
-        ]
+        entries = {key: value for key, value in self._dick.items().items() if key not in _RESERVED_KEYS}
+        ordered = [key for key in _SETTING_ORDER if key in entries]
+        ordered += [key for key in entries if key not in _SETTING_ORDER]
+        return [(key, self._setting_value(key, entries[key])) for key in ordered]
+
+    def _setting_value(self, key: str, raw: Any) -> Any:
+        if key == "modelname":
+            return self.model()
+        if key == "reasoning_effort":
+            return self.effort()
+        if key == "think_collapsed":
+            return self.think_collapsed()
+        if key == "context_limit":
+            return self._config.get("context_limit", 128000)
+        if key == "peer_serve":
+            return self.peer_serve()
+        if key == "peer_tools":
+            return self._config.get("peer_tools", True)
+        if key == "extra":
+            return self.extras()
+        return raw
 
     def _reconnect(self) -> None:
         name = self.model()
@@ -220,11 +246,20 @@ class core:
             return False
         raise ValueError(f"开关键只认 true/false（1/0、yes/no、on/off、开/关也行），收到 {raw!r}")
 
+    @staticmethod
+    def _parse_value(raw: str) -> Any:
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return raw
+
     @_guarded
     async def set_setting(self, path: str, raw: str) -> None:
         value = raw.strip()
-        if not value and path != "access_key":
+        if not value and path in _SETTING_ORDER and path != "access_key":
             raise ValueError(f"{path} 不能为空")
+        if path in _RESERVED_KEYS:
+            raise ValueError(f"{path} 是保留键，不能通过设置面板修改")
         if path in ("apikey", "baseurl"):
             self._dick.set(path, value)
             self._reconnect()
@@ -234,27 +269,25 @@ class core:
             self._dick.update()
         elif path == "modelname":
             self.set_model(value)
-        elif path == "config.reasoning_effort":
+        elif path == "reasoning_effort":
             self.set_effort(value)
-        elif path == "config.think_collapsed":
+        elif path == "think_collapsed":
             self.set_think_collapsed(self._parse_bool(value))
-        elif path == "config.context_limit":
+        elif path == "context_limit":
             if not value.isdigit():
                 raise ValueError(f"context_limit 需要正整数，收到 {value!r}")
             self._config["context_limit"] = int(value)
-            self._dick.set("config", self._config)
-            self._dick.update()
-        elif path in ("config.peer_serve", "config.peer_tools"):
-            self._config[path.removeprefix("config.")] = self._parse_bool(value)
-            self._dick.set("config", self._config)
-            self._dick.update()
-        elif path == "config.extra":
+            self._save_config()
+        elif path in ("peer_serve", "peer_tools"):
+            self._config[path] = self._parse_bool(value)
+            self._save_config()
+        elif path == "extra":
             self._config["extra"] = self._parse_extra(value)
             self._extra_index = 0
-            self._dick.set("config", self._config)
-            self._dick.update()
+            self._save_config()
         else:
-            raise ValueError(f"未知配置项：{path}")
+            self._dick.set(path, self._parse_value(value))
+            self._dick.update()
 
     def _load_sessions(self) -> None:
         memory = self._memfile.any("memory", {})
@@ -294,8 +327,8 @@ class core:
         self._dick = dick(str(here / "config.json"))
         self._memfile = dick(str(here / "memory.json"))
         self._load_sessions()
-        self._config = self._dick.any("config",{})
-        self._extra_index = self._config.get("extra_index", 0)
+        self._config = self._load_config()
+        self._extra_index = self._dick.int("extra_index", 0)
 
 
     def _analyze_usrmsg(self, usrmsg: str) -> ccmp:

@@ -39,7 +39,7 @@ print(reply)   # {"role": "assistant", "content": "..."}
 ```bash
 python -m api.peer_api                              # 0.0.0.0:1124，access_key 取自 config.json
 python -m api.peer_api --port 9000 --key my-key     # 换端口/直接给 key
-python -m api.peer_api --no-tools                   # 强制关闭（默认看 config.json 的 config.peer_tools）
+python -m api.peer_api --no-tools                   # 强制关闭（默认看 config.json 的 peer_tools）
 python -m api.peer_api --probe http://host/chat --key k   # 只打一发请求看结果（诊断用，不起服务）
 ```
 - 读 `configure/config.json` 的 `apikey`/`baseurl`/`modelname` 跑**本地模型**；`access_key` 用来校验来客
@@ -70,17 +70,17 @@ python -m api.peer_api --probe http://host/chat --key k   # 只打一发请求�
 只搭好不启动（起停自己控制：`srv.serve_forever()` / `srv.shutdown()`，也能嵌到别的进程里）。
 
 > ⚠️ 默认监听 `0.0.0.0`，而“远端能不能驱动本地工具”由 config.json 里的开关键决定：
-> `"config": { "peer_tools": true | false }`（缺省 **true**）。true 时拿到 `access_key` 的一方可以让本地模型
+> `"peer_tools": true | false`（缺省 **true**）。true 时拿到 `access_key` 的一方可以让本地模型
 > 在你机器上执行工具，只在你信任的网络里跑；CLI 的 `--no-tools` 可以无视配置强制关。
-> 这个键在 f2/^p 的设置面板里能直接改（`core.settings()` 列了它），**改完要重启 TUI/服务才生效**（启动时读一次）。
+> 这个键在 f2 的设置面板里能直接改（`core.settings()` 列了它），**改完要重启 TUI/服务才生效**（启动时读一次）。
 
 > [TUI](../tui/main.py)（`python tui/main.py`）启动时会自动调 `make_server` 起一份带 `0.0.0.0:PORT` 的，
 > 退出时关掉；`access_key` 还是占位值或 1124 被占就只在聊天区提一句、不影响用 TUI。
 > （所以手动跑 CLI 起服务时，记得 TUI 那边已经把 1124 占了）
 >
-> 另有一个开关键 `"config": { "peer_serve": true | false }`（缺省 **true**）决定 TUI 启动时起不起这份服务；
-> 在 `^p` 的 **peer 栏**里有两条：一条当场开关服务（状态写在行里，回车就切，端口即时释放/占用），
-> 一条翻 `peer_serve`（下次启动生效）。两者都不影响本机自己聊天。
+> 另有一个开关键 `"peer_serve": true | false`（缺省 **true**）决定 TUI 启动时起不起这份服务；
+> 在 `^p` 的 **peer 栏**里可以当场开关服务（状态写在行里，回车就切，端口即时释放/占用），
+> 而 `peer_serve`（下次启动生效）只在 `f2` 设置表格里改。两者都不影响本机自己聊天。
 
 ## 已连接过的设备（[`connect.json`](../configure/connect.json)）
 

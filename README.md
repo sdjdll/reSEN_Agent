@@ -36,16 +36,14 @@
   "baseurl": "https://api.openai.com/v1",
   "modelname": "gpt-4o-mini",
   "access_key": "peer-共享密钥",
-  "config": {
-    "reasoning_effort": "medium",
-    "context_limit": 128000,
-    "peer_serve": true,
-    "peer_tools": true,
-    "extra": [
-      { "thinking": { "type": "enabled" } },
-      { "thinking": { "type": "disabled" } }
-    ]
-  }
+  "reasoning_effort": "medium",
+  "context_limit": 128000,
+  "peer_serve": true,
+  "peer_tools": true,
+  "extra": [
+    { "thinking": { "type": "enabled" } },
+    { "thinking": { "type": "disabled" } }
+  ]
 }
 ```
 
@@ -55,11 +53,11 @@
 | `baseurl` | 服务地址，需以 `/v1` 结尾（视服务而定） |
 | `modelname` | 默认模型名，TUI 中可点击切换 |
 | `access_key` | peer 服务鉴权密钥；设为空字符串表示不鉴权，保持 `NO-ACCESS_KEY` 则拒绝启动 peer |
-| `config.reasoning_effort` | 推理强度：`none` / `minimal` / `low` / `medium` / `high` / `xhigh` / `max` |
-| `config.context_limit` | 上下文上限（token），用于底部用量显示 |
-| `config.peer_serve` | 启动 TUI 时是否自动拉起 peer 服务（默认 `true`） |
-| `config.peer_tools` | 是否允许远端 peer 驱动本地工具（默认 `true`） |
-| `config.extra` | 额外请求体列表，TUI 中可切换；如 `thinking` 开关 |
+| `reasoning_effort` | 推理强度：`none` / `minimal` / `low` / `medium` / `high` / `xhigh` / `max` |
+| `context_limit` | 上下文上限（token），用于底部用量显示 |
+| `peer_serve` | 启动 TUI 时是否自动拉起 peer 服务（默认 `true`） |
+| `peer_tools` | 是否允许远端 peer 驱动本地工具（默认 `true`） |
+| `extra` | 额外请求体列表，TUI 中可切换；如 `thinking` 开关 |
 
 ### 3. 安装与启动
 
@@ -97,8 +95,8 @@ python -m venv .venv
 | `Enter` | 发送消息 / 确认 |
 | `↑` `↓` | 历史消息滚动 |
 | `PgUp` `PgDn` | 历史分页 |
-| `Ctrl+P` | 命令面板（设置、会话、peer 服务） |
-| `F2` | 打开设置表格 |
+| `Ctrl+P` | 命令面板（会话、peer 服务） |
+| `F2` | 打开设置表格（`config.json` 里的**每个键**都会列出，回车即可改；改未知键时按 JSON 解析，失败则存字符串） |
 | `Ctrl+Z` | 挂起进程 |
 | `Ctrl+Q` | 退出（退出前自动落盘） |
 | `Esc` | 关闭弹窗 |
@@ -111,9 +109,10 @@ python -m venv .venv
 
 ### 命令面板（`Ctrl+P`）
 
-- **设置**：列出 `config.json` 的所有配置项，回车修改
 - **会话**：新建、切换、删除会话
-- **peer**：启动/停止 peer 服务、切换开机自启
+- **peer**：启动/停止 peer 服务（开机自启 `peer_serve` 在 `F2` 设置里改）
+
+> 配置的修改只走 `F2` 设置表格；命令面板里不会再出现可改配置的项。
 
 ## 工具系统
 

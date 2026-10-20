@@ -212,8 +212,7 @@ class _Handler(BaseHTTPRequestHandler):
 
 
 def tools_enabled() -> bool:
-    cfg = dick(str(_CONFIG)).any("config", {})
-    return bool(cfg.get("peer_tools", True)) if isinstance(cfg, dict) else True
+    return dick(str(_CONFIG)).bool("peer_tools", True)
 
 
 def make_server(host: str = "0.0.0.0", port: int = PORT, key: str | None = None,
@@ -275,7 +274,7 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="0.0.0.0", help="监听地址（默认 0.0.0.0，对外可达）")
     parser.add_argument("--port", type=int, default=PORT, help=f"监听端口（默认 {PORT}）")
     parser.add_argument("--key", default=None, help="访问密钥（默认取 config.json 的 access_key）")
-    parser.add_argument("--no-tools", action="store_true", help="禁止远端请求驱动本地工具（默认看 config.json 的 config.peer_tools）")
+    parser.add_argument("--no-tools", action="store_true", help="禁止远端请求驱动本地工具（默认看 config.json 的 peer_tools）")
     parser.add_argument("--probe", metavar="URL", help="只对着 URL 打一发请求看结果（诊断用，不起服务）")
     parser.add_argument("--text", default="ping", help="--probe 时发过去的那句话")
     args = parser.parse_args()

@@ -26,7 +26,7 @@ import api.peer_api as peer_api
 from agentapi.core import agent_error, core
 from file.dick import dick
 from file.jsonfile import jsonfile
-from setpanel import (Confirm, PeerProvider, SessionProvider, SettingProvider, SettingsScreen,
+from setpanel import (Confirm, PeerProvider, SessionProvider, SettingsScreen,
                       prompt_new_session)
 
 def _toolmsg(reply: ccmp) -> str:
@@ -49,17 +49,15 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     "baseurl": "https://api.deepseek.com",
     "modelname": "deepseek-chat",
     "access_key": peer_api.NO_ACCESS_KEY,
-    "config": {
-        "reasoning_effort": "medium",
-        "think_collapsed": True,
-        "context_limit": 128000,
-        "peer_serve": False,
-        "peer_tools": True,
-        "extra": [
-            {"thinking": {"type": "enabled"}},
-            {"thinking": {"type": "disabled"}},
-        ],
-    },
+    "reasoning_effort": "medium",
+    "think_collapsed": True,
+    "context_limit": 128000,
+    "peer_serve": False,
+    "peer_tools": True,
+    "extra": [
+        {"thinking": {"type": "enabled"}},
+        {"thinking": {"type": "disabled"}},
+    ],
 }
 
 class Clickable(Static):
@@ -94,7 +92,7 @@ class main(App):
         ("ctrl+z", "suspend_process", "挂起"),
     ]
 
-    COMMANDS = {*App.COMMANDS, SettingProvider, SessionProvider, PeerProvider}
+    COMMANDS = {*App.COMMANDS, SessionProvider, PeerProvider}
 
     _core: core
     _cfg: dick
@@ -153,7 +151,7 @@ class main(App):
         if self._core.peer_serve():
             await self._note(self._start_peer())
         else:
-            await self._note("peer 服务未启动（config.peer_serve = false）—— ^p 的 peer 栏里可以打开")
+            await self._note("peer 服务未启动（peer_serve = false）—— f2 设置里能改，^p 的 peer 栏里能临时启动")
         if self._core.notice():
             await self._note(f"⚠ {self._core.notice()}")
 
@@ -161,7 +159,7 @@ class main(App):
         try:
             srv = peer_api.make_server("0.0.0.0", peer_api.PORT)
         except peer_api.api_error as e:
-            return f"⚠ peer 服务没起来（{e}）—— 改完 access_key 重启即可（^p 的 set 栏或 f2 都能改）"
+            return f"⚠ peer 服务没起来（{e}）—— 改完 access_key 重启即可（f2 设置里能改）"
         except OSError as e:
             return f"⚠ peer 服务没起来（{type(e).__name__}: {e}）—— 1124 可能被别的进程占了（ss -ltnp | grep 1124）"
         threading.Thread(target=srv.serve_forever, name="peer_api", daemon=True).start()
@@ -178,10 +176,6 @@ class main(App):
     @property
     def peer_running(self) -> bool:
         return self._peer_server is not None
-
-    @property
-    def peer_autostart(self) -> bool:
-        return self._core.peer_serve()
 
     def toggle_peer(self) -> None:
         self.run_worker(self._toggle_peer())
@@ -252,20 +246,6 @@ class main(App):
             await self._error(e)
             return
         self.session_switched("会话1", created=True)
-
-    def toggle_peer_autostart(self) -> None:
-        self.run_worker(self._flip_peer_serve())
-
-    async def _flip_peer_serve(self) -> None:
-        want = not self._core.peer_serve()
-        try:
-            await self._core.set_setting("config.peer_serve", "true" if want else "false")
-        except agent_error as e:
-            await self._error(e)
-            return
-        self.refresh_settings()
-        now = "运行中" if self.peer_running else "没在跑"
-        await self._note(f"peer 开机自启已设为「{'开' if want else '关'}」（重启 TUI 生效；现在{now}）")
 
     def _show_usage(self) -> None:
         used, limit = self._core.usage()
@@ -420,14 +400,14 @@ class main(App):
     async def _error(self, message: object) -> None:
         await self._note(f"⚠ {message}", "error")
 
-    async def _bubble(self) -> tuple[Static, Static]:
+    async def _bubble(self) -> "tuple[ThinkStatic, Static]":
         msgid = self._newid("msg")
         box = ComplateMessage("", "", id=msgid, collapsed=self._core.think_collapsed())
         hist = self.query_one("#History", HistoryScroll)
         await hist.mount(box)
         hist.sticky = True
         hist.scroll_end(animate=False)
-        return box.query_one(f"#{msgid}think", Static), box.query_one(f"#{msgid}context", Static)
+        return box.query_one(f"#{msgid}think", ThinkStatic), box.query_one(f"#{msgid}context", Static)
 
     def _newid(self, prefix: str) -> str:
         self._count += 1
@@ -440,6 +420,8 @@ class main(App):
         except agent_error as e:
             await self._error(e)
             return
+        finally:
+            think.finish()
         self._show_usage()
         if reply is None:
             return
@@ -536,6 +518,28 @@ class FollowStatic(Static):
         return None
 
 
+class ThinkStatic(FollowStatic):
+    """思考链内容；把字数同步到外层 Collapsible 的标题上。"""
+
+    _state: str = "Thinking"
+    _count: int = 0
+
+    def update(self, content: Any = "", *, layout: bool = True) -> None:
+        super().update(content, layout=layout)
+        self._count = len(content) if isinstance(content, str) else len(str(content))
+        self._sync_title()
+
+    def finish(self) -> None:
+        self._state = "Done"
+        self._sync_title()
+
+    def _sync_title(self) -> None:
+        for node in self.ancestors:
+            if isinstance(node, Collapsible):
+                node.title = f"{self._state}({self._count})"
+                return
+
+
 class ComplateMessage(Container):
     DEFAULT_CSS = """
     ComplateMessage { height: auto; }
@@ -543,7 +547,7 @@ class ComplateMessage(Container):
 
     def __init__(self,think:str, context:str, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True, collapsed: bool = True) -> None:
         super().__init__(
-            Collapsible(FollowStatic(think, id=f"{id}think", markup=markup), collapsed=collapsed),
+            Collapsible(ThinkStatic(think, id=f"{id}think", markup=markup), title="Thinking(0)", collapsed=collapsed),
             FollowStatic(context, id=f"{id}context", markup=markup)
             , name=name, id=id, classes=classes, disabled=disabled, markup=markup)
 
