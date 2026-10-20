@@ -194,7 +194,6 @@ class main(App):
         self._stop_peer()
 
     def _watch_signals(self) -> None:
-        # 按名字取信号：Windows 没有 SIGHUP，直接写属性会在 try 之外抛 AttributeError
         for name in ("SIGHUP", "SIGTERM"):
             try:
                 signal.signal(getattr(signal, name), self._flush_and_die)
@@ -335,7 +334,6 @@ class main(App):
             (False, True): hist.scroll_page_down,
         }[up, page]()
         if not up:
-            # scroll_to 本身延后到下次刷新，这里也要在其后再判断是否到底
             hist.call_after_refresh(hist.sync_sticky)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -491,7 +489,6 @@ class ToolCall(Container):
         else:
             return
         self._decided = True
-        # 只收起按钮，保留工具调用内容（参数）在历史里可查
         await self._buttons.remove()
 
     @property
