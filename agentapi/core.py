@@ -161,6 +161,14 @@ class core:
         self._dick.set("config", self._config)
         self._dick.update()
 
+    def think_collapsed(self) -> bool:
+        return bool(self._config.get("think_collapsed", True))
+
+    def set_think_collapsed(self, collapsed: bool) -> None:
+        self._config["think_collapsed"] = collapsed
+        self._dick.set("config", self._config)
+        self._dick.update()
+
     def extras(self) -> list[dict[str, Any]]:
         extra = self._config.get("extra", {"thinking": {"type": "enabled"}})
         extras = extra if isinstance(extra, list) else [extra]
@@ -182,6 +190,7 @@ class core:
             ("modelname", self.model()),
             ("access_key", self._dick.str("access_key", NO_ACCESS_KEY)),
             ("config.reasoning_effort", self.effort()),
+            ("config.think_collapsed", self.think_collapsed()),
             ("config.context_limit", self._config.get("context_limit", 128000)),
             ("config.peer_serve", self.peer_serve()),
             ("config.peer_tools", self._config.get("peer_tools", True)),
@@ -227,6 +236,8 @@ class core:
             self.set_model(value)
         elif path == "config.reasoning_effort":
             self.set_effort(value)
+        elif path == "config.think_collapsed":
+            self.set_think_collapsed(self._parse_bool(value))
         elif path == "config.context_limit":
             if not value.isdigit():
                 raise ValueError(f"context_limit 需要正整数，收到 {value!r}")

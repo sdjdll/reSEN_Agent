@@ -51,6 +51,7 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     "access_key": peer_api.NO_ACCESS_KEY,
     "config": {
         "reasoning_effort": "medium",
+        "think_collapsed": True,
         "context_limit": 128000,
         "peer_serve": False,
         "peer_tools": True,
@@ -139,6 +140,7 @@ class main(App):
         yield Horizontal(
             Static("^q 退出  ^p 命令  f2 设置  ↑↓ 历史", id="Ft_Keys"),            Clickable(self._core.model(), self._cycle_model, id="Ft_Model"),
             Clickable(self._core.effort(), self._cycle_effort, id="Ft_Effort"),
+            Clickable(self._think_label(), self._toggle_think, id="Ft_Think"),
             Clickable(_extralabel(self._core.extra()), self._cycle_extra, id="Ft_Extra"),
             Static("余额 …", id="Ft_Balance"),
             Clickable("", self._compress, id="Ft_Context"),
@@ -280,6 +282,7 @@ class main(App):
     def refresh_settings(self) -> None:
         self.query_one("#Ft_Model", Static).update(self._core.model())
         self.query_one("#Ft_Effort", Static).update(self._core.effort())
+        self.query_one("#Ft_Think", Static).update(self._think_label())
         self.query_one("#Ft_Extra", Static).update(_extralabel(self._core.extra()))
         self._show_usage()
 
@@ -332,6 +335,13 @@ class main(App):
         index = (self._core.extra_index() + 1) % len(self._core.extras())
         self._core.set_extra_index(index)
         self.query_one("#Ft_Extra", Static).update(_extralabel(self._core.extra()))
+
+    def _think_label(self) -> str:
+        return "思考: 折叠" if self._core.think_collapsed() else "思考: 展开"
+
+    def _toggle_think(self) -> None:
+        self._core.set_think_collapsed(not self._core.think_collapsed())
+        self.query_one("#Ft_Think", Static).update(self._think_label())
 
     def action_history_scroll(self, up: bool, page: bool = False) -> None:
         hist = self.query_one("#History", VerticalScroll)
@@ -406,7 +416,7 @@ class main(App):
 
     async def _bubble(self) -> tuple[Static, Static]:
         msgid = self._newid("msg")
-        box = ComplateMessage("", "", id=msgid)
+        box = ComplateMessage("", "", id=msgid, collapsed=self._core.think_collapsed())
         await self.query_one("#History", VerticalScroll).mount(box)
         self.query_one("#History", VerticalScroll).scroll_end()
         return box.query_one(f"#{msgid}think", Static), box.query_one(f"#{msgid}context", Static)
@@ -485,9 +495,9 @@ class ComplateMessage(Container):
     ComplateMessage { height: auto; }
     """
 
-    def __init__(self,think:str, context:str, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True) -> None:
+    def __init__(self,think:str, context:str, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True, collapsed: bool = True) -> None:
         super().__init__(
-            Collapsible(Static(think, id=f"{id}think", markup=markup)),
+            Collapsible(Static(think, id=f"{id}think", markup=markup), collapsed=collapsed),
             Static(context, id=f"{id}context", markup=markup)
             , name=name, id=id, classes=classes, disabled=disabled, markup=markup)
 
