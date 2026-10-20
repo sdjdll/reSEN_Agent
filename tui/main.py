@@ -393,8 +393,10 @@ class main(App):
                 self._set_busy(False)
 
     async def _abort(self) -> None:
+        # 只清掉仍在等待审批的卡片；已放行/已展示过的参数保留在历史里可见。
         for card in list(self.query(ToolCall)):
-            await card.remove()
+            if card.pending:
+                await card.remove()
         await self._note("⏹ 已停止：本轮对话中止，未执行的工具已丢弃")
         self._set_busy(False)
 
@@ -432,7 +434,16 @@ class main(App):
         self._show_usage()
         if reply is None:
             return
+        # 无论是否已放行，工具调用参数都必须先挂到界面上；
+        # 自动放行时只是去掉审批按钮，参数展示不能省。
+        hist = self.query_one("#History", HistoryScroll)
+        toolmsg = _toolmsg(reply)
         if self._allow_all or self._allow_turn:
+            auto = "✓ Allow All 已开启，自动执行" if self._allow_all else "✓ 本轮已允许（Allow This），自动执行"
+            await hist.mount(ToolCall(
+                toolmsg, [], [], auto=auto, id=self._newid("tc"), markup=False,
+            ))
+            hist.follow_end()
             await self._tools(reply)
             return
         def act(allow: bool, turn: bool = False, all_: bool = False) -> FunctionType:
@@ -441,11 +452,11 @@ class main(App):
                 self._allow_all = self._allow_all or all_
                 self._launch(self._turn(self._tools(reply, not allow)))
             return action
-        await self.query_one("#History", HistoryScroll).mount(ToolCall(
-            _toolmsg(reply), [act(True), act(True, turn=True), act(True, all_=True), act(False)],
+        await hist.mount(ToolCall(
+            toolmsg, [act(True), act(True, turn=True), act(True, all_=True), act(False)],
             [], id=self._newid("tc"), markup=False,
         ))
-        self.query_one("#History", HistoryScroll).follow_end()
+        hist.follow_end()
 
     async def _tools(self, reply: ccmp, deny: bool = False) -> None:
         await self._watch(self._core.deny(reply) if deny else self._core.tool(reply))
@@ -462,29 +473,39 @@ class ToolCall(Container):
         padding: 0 1;
         margin: 0 2 0 0;
     }
+    ToolCall .toolcall-auto { color: $success; }
     """
 
     _action: list[FunctionType]
     _args: list
-    _buttons: Horizontal
+    _buttons: Horizontal | None
     _decided: bool = False
 
-    def __init__(self, toolcall_msg:str,action: list[FunctionType], args:list, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True) -> None:
-        buttons = Horizontal(
-            Button("Allow",id=f"{id}y"),
-            Button("Allow This",id=f"{id}t"),
-            Button("Allow All",id=f"{id}a"),
-            Button("Deny", id=f"{id}n")
-        )
+    def __init__(self, toolcall_msg:str, action: list[FunctionType] | None = None, args: list | None = None, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True, auto: str | None = None) -> None:
+        """auto 不为空时表示已自动放行：只展示参数，不显示审批按钮。"""
+        buttons: Horizontal | None = None
+        widgets: list[Static | Horizontal] = [Static(toolcall_msg, markup=markup)]
+        if auto is None:
+            buttons = Horizontal(
+                Button("Allow",id=f"{id}y"),
+                Button("Allow This",id=f"{id}t"),
+                Button("Allow All",id=f"{id}a"),
+                Button("Deny", id=f"{id}n")
+            )
+            widgets.append(buttons)
+        else:
+            widgets.append(Static(auto, markup=False, classes="toolcall-auto"))
         super().__init__(
-            Static(toolcall_msg, markup=markup),
-            buttons
+            *widgets
             ,name=name, id=id, classes=classes, disabled=disabled, markup=markup
         )
-        self._action = action
-        self._args = args
+        self._action = action or []
+        self._args = args or []
         self._buttons = buttons
+        self._decided = auto is not None
     async def on_button_pressed(self, event: Button.Pressed):
+        if self._buttons is None:
+            return
         if event.button.id == f"{self.id}y":
             self._action[0](self._args)
         elif event.button.id == f"{self.id}t":
