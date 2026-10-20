@@ -60,9 +60,8 @@ class agent_api:
         return self.__model.chat.completions.stream(
             model=self.__model_name,
             messages=usrmsg,
-            tools=self.get_schemas(),
+            extra_body={**(extra or {}), "tools": self.get_schemas()},
             reasoning_effort=reasoning_effort,
-            extra_body=extra,
             stream_options={"include_usage": True}
         )
 
