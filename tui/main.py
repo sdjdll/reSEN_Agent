@@ -129,7 +129,7 @@ class main(App):
 
     def compose(self):
         yield Header()
-        yield VerticalScroll(
+        yield HistoryScroll(
             id="History"
         )
         yield Horizontal(
@@ -344,13 +344,18 @@ class main(App):
         self.query_one("#Ft_Think", Static).update(self._think_label())
 
     def action_history_scroll(self, up: bool, page: bool = False) -> None:
-        hist = self.query_one("#History", VerticalScroll)
+        hist = self.query_one("#History", HistoryScroll)
+        if up:
+            hist.sticky = False
         {
             (True, False): hist.scroll_up,
             (False, False): hist.scroll_down,
             (True, True): hist.scroll_page_up,
             (False, True): hist.scroll_page_down,
         }[up, page]()
+        if not up:
+            # scroll_to 本身延后到下次刷新，这里也要在其后再判断是否到底
+            hist.call_after_refresh(hist.sync_sticky)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id != "Btn_Send":
@@ -407,8 +412,9 @@ class main(App):
         self._set_busy(False)
 
     async def _note(self, message: str, classes: str = "") -> None:
-        hist = self.query_one("#History", VerticalScroll)
+        hist = self.query_one("#History", HistoryScroll)
         await hist.mount(Static(message, id=self._newid("note"), markup=False, classes=classes))
+        hist.sticky = True
         hist.scroll_end(animate=False)
 
     async def _error(self, message: object) -> None:
@@ -417,8 +423,10 @@ class main(App):
     async def _bubble(self) -> tuple[Static, Static]:
         msgid = self._newid("msg")
         box = ComplateMessage("", "", id=msgid, collapsed=self._core.think_collapsed())
-        await self.query_one("#History", VerticalScroll).mount(box)
-        self.query_one("#History", VerticalScroll).scroll_end()
+        hist = self.query_one("#History", HistoryScroll)
+        await hist.mount(box)
+        hist.sticky = True
+        hist.scroll_end(animate=False)
         return box.query_one(f"#{msgid}think", Static), box.query_one(f"#{msgid}context", Static)
 
     def _newid(self, prefix: str) -> str:
@@ -443,10 +451,11 @@ class main(App):
                 self._allow_all = self._allow_all or all_
                 self._launch(self._turn(self._tools(reply, not allow)))
             return action
-        await self.query_one("#History", VerticalScroll).mount(ToolCall(
+        await self.query_one("#History", HistoryScroll).mount(ToolCall(
             _toolmsg(reply), [act(True), act(True, True), act(False)], [], id=self._newid("tc"),
             markup=False,
         ))
+        self.query_one("#History", HistoryScroll).follow_end()
 
     async def _tools(self, reply: ccmp, deny: bool = False) -> None:
         await self._watch(self._core.deny(reply) if deny else self._core.tool(reply))
@@ -490,6 +499,43 @@ class ToolCall(Container):
             return
         await self.remove()
 
+class HistoryScroll(VerticalScroll):
+
+    sticky: bool = True
+
+    def sync_sticky(self) -> None:
+        self.sticky = self.scroll_target_y >= self.max_scroll_y
+
+    def follow_end(self) -> None:
+        if self.is_vertical_scrollbar_grabbed:
+            self.sticky = False
+            return
+        if not self.sticky and self.is_vertical_scroll_end:
+            self.sticky = True
+        if self.sticky:
+            self.scroll_end(animate=False)
+
+    def _on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        self.sticky = False
+
+    def _on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        self.call_after_refresh(self.sync_sticky)
+
+
+class FollowStatic(Static):
+
+    def update(self, content: Any = "", *, layout: bool = True) -> None:
+        super().update(content, layout=layout)
+        if (history := self._history()) is not None:
+            history.follow_end()
+
+    def _history(self) -> HistoryScroll | None:
+        for node in self.ancestors:
+            if isinstance(node, HistoryScroll):
+                return node
+        return None
+
+
 class ComplateMessage(Container):
     DEFAULT_CSS = """
     ComplateMessage { height: auto; }
@@ -497,8 +543,8 @@ class ComplateMessage(Container):
 
     def __init__(self,think:str, context:str, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True, collapsed: bool = True) -> None:
         super().__init__(
-            Collapsible(Static(think, id=f"{id}think", markup=markup), collapsed=collapsed),
-            Static(context, id=f"{id}context", markup=markup)
+            Collapsible(FollowStatic(think, id=f"{id}think", markup=markup), collapsed=collapsed),
+            FollowStatic(context, id=f"{id}context", markup=markup)
             , name=name, id=id, classes=classes, disabled=disabled, markup=markup)
 
 
