@@ -5,7 +5,6 @@ import signal
 import sys
 import threading
 from functools import partial
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Iterable, cast
 from types import FunctionType
@@ -109,7 +108,7 @@ class main(App):
     _count: int = 0
     _busy: bool = False
     _worker: Worker[None] | None = None
-    _peer_server: ThreadingHTTPServer | None = None
+    _peer_server: peer_api.PeerServer | None = None
 
     def __init__(self):
         super().__init__()
