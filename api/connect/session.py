@@ -38,6 +38,7 @@ FT_BYE = 0x04
 
 PORT = 1124
 MAX_FAILS = 3
+HELLO_TIMEOUT = 5.0  # 握手超时（秒）：超时即断开，防零成本建连占资源
 HELLO_ALGO = crypto.ALGO_CHACHA20_POLY1305  # hello 固定用纯 Python 实现，处处可解
 
 
@@ -256,7 +257,9 @@ class Channel:
         async with self._ready_lock:
             if self._keys is not None and self._algo is not None:
                 return
-            await self._recv_hello()
+            # 握手必须限时：等待 hello 不需要任何密钥，若不限时，
+            # 不持有 access_key 的攻击者建连后静默不发就能长期占用服务端协程（零成本 DoS）。
+            await asyncio.wait_for(self._recv_hello(), HELLO_TIMEOUT)
 
     async def _recv_hello(self) -> None:
         ftype, data = await self._read_frame(
@@ -320,6 +323,12 @@ class Channel:
         if self._closed:
             return
         self._closed = True
+        # 先落盘计数状态：接收水位（防重放）必须跨连接、跨重启保留。
+        # 否则进程被强杀/熔断时，最近 <COMMIT_EVERY 帧的水位会丢，旧帧可被重放。
+        try:
+            self._state.flush()
+        except Exception:
+            log.exception("failed to persist counter state")
         try:
             self._writer.close()
             await self._writer.wait_closed()

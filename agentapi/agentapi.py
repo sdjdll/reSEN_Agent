@@ -1,6 +1,9 @@
 import json
 from typing import cast, Literal,Any
 
+# 必须在创建任何 openai 客户端之前执行：自动修正 socks:// 等 httpx 不认的代理 scheme，
+# 否则构造 AsyncOpenAI 时会直接抛 ValueError: Unknown scheme for proxy URL。
+from . import netenv as _netenv  # noqa: F401  (导入即生效)
 from openai import AsyncOpenAI as openai
 from openai.types.chat import ChatCompletionMessageParam as ccmp, ChatCompletionMessage as ccm, ChatCompletionToolParam as cctp
 from openai.lib.streaming.chat import AsyncChatCompletionStreamManager

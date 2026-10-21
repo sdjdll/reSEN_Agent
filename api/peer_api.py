@@ -247,7 +247,7 @@ class PeerServer(session.PeerServer):
 
     api: agent_api
     use_tools: bool
-
+    
     def __init__(
         self,
         api: agent_api,
@@ -257,7 +257,7 @@ class PeerServer(session.PeerServer):
         access_key: str,
         use_tools: bool,
     ) -> None:
-        super().__init__(handler, host, port, access_key)
+        super().__init__(handler, host, port, access_key, timeout=dick(str(_CONFIG)).float("peer_timeout", 10.0))
         self.api = api
         self.use_tools = use_tools
 

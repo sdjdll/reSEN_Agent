@@ -91,10 +91,13 @@ class CounterState:
     def take_tx(self, key: str) -> int:
         """取一个严格单调的发送 counter，并在需要时预留式落盘。"""
         with self._lock:
-            saved = self._tx_saved.get(key, 0)
-            c = max(self._tx_next.get(key, 0), saved, _now_ms())
+            if key not in self._tx_next:
+                # 仅首次取号时参考 saved_next（崩溃恢复起点）与当前时钟；
+                # 之后一律以内存为准，直到预留窗口用尽才重新落盘。
+                self._tx_next[key] = max(self._tx_saved.get(key, 0), _now_ms())
+            c = self._tx_next[key]
             self._tx_next[key] = c + 1
-            if c + 1 >= saved:
+            if c + 1 >= self._tx_saved.get(key, 0):
                 self._tx_saved[key] = c + 1 + self.reserve
                 self.commit()
             return c
