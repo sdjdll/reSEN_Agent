@@ -58,12 +58,17 @@ class Sysenv(hotplug_tool):
                 if k in os.environ:
                     v = os.environ[k]
                     out[k] = v if len(v) < 160 else v[:157] + "..."
+            # 用相对本文件的路径解析，不依赖进程 cwd（否则从仓库根启动时永远找不到）
+            _here = os.path.dirname(os.path.abspath(__file__))       # .../agentapi/tools
+            _root = os.path.dirname(os.path.dirname(_here))          # 仓库根
             try:
-                out["tools_dir"] = sorted(os.listdir("tools"))
+                out["tools_dir"] = sorted(
+                    f[:-3] for f in os.listdir(_here) if f.endswith(".py") and f != "__init__.py"
+                )
             except Exception:
                 out["tools_dir"] = None
             try:
-                out["skills_dir"] = sorted(os.listdir("skills"))
+                out["skills_dir"] = sorted(os.listdir(os.path.join(_root, "skills")))
             except Exception:
                 out["skills_dir"] = None
 
