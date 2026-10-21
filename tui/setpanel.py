@@ -86,7 +86,7 @@ class Confirm(ModalScreen[bool]):
 
     def compose(self):
         yield Vertical(
-            Static(self._title, id="Cfm_Title"),
+            Static(self._title, id="Cfm_Title", markup=False),
             Static(self._detail, id="Cfm_Detail", markup=False),
             Static("y / 回车 确认　　n / esc 取消", id="Cfm_Tip"),
             id="Cfm_Box",

@@ -74,7 +74,7 @@ class Clickable(Static):
     """
 
     def __init__(self, content: str, action: Callable[[], None], id: str) -> None:
-        super().__init__(content, id=id)
+        super().__init__(content, id=id, markup=False)
         self._action = action
 
     def on_click(self, event: events.Click) -> None:
@@ -587,7 +587,8 @@ class ComplateMessage(Container):
     ComplateMessage { height: auto; }
     """
 
-    def __init__(self,think:str, context:str, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = True, collapsed: bool = True) -> None:
+    def __init__(self,think:str, context:str, name: str | None = None, id: str | None = None, classes: str | None = None, disabled: bool = False, markup: bool = False, collapsed: bool = True) -> None:
+        # 思考过程与正文都是模型输出，不能当 Textual markup 解析
         super().__init__(
             Collapsible(ThinkStatic(think, id=f"{id}think", markup=markup), title="Thinking(0)", collapsed=collapsed),
             FollowStatic(context, id=f"{id}context", markup=markup)
