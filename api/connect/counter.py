@@ -30,9 +30,11 @@ _DEFAULT_STATE: "CounterState | None" = None
 def default_state_path() -> Path:
     """``configure/peer/<install_uuid>.json``：同机多实例互不干扰。"""
     global _DEFAULT_PATH
-    if _DEFAULT_PATH is None:
-        _DEFAULT_PATH = crypto.ROOT / "configure" / "peer" / f"{crypto.install_uuid()}.json"
-    return _DEFAULT_PATH
+    cached = _DEFAULT_PATH
+    if cached is None:
+        cached = crypto.ROOT / "configure" / "peer" / f"{crypto.install_uuid()}.json"
+        _DEFAULT_PATH = cached
+    return cached
 
 
 def shared_state() -> "CounterState":
@@ -61,6 +63,7 @@ class CounterState:
         self.path = Path(path) if path is not None else default_state_path()
         self.reserve = reserve
         self.commit_every = max(1, commit_every)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self._store = jsonfile(str(self.path))
         data = self._store.read()
         data = data if isinstance(data, dict) else {}

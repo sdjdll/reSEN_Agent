@@ -19,10 +19,11 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import inspect
 import logging
 import socket
 import struct
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, cast
 
 from . import crypto, pack
 from .counter import CounterState, shared_state
@@ -75,9 +76,11 @@ _DEFAULT_FP: bytes | None = None
 
 def local_fingerprint() -> bytes:
     global _DEFAULT_FP
-    if _DEFAULT_FP is None:
-        _DEFAULT_FP = crypto.fingerprint()
-    return _DEFAULT_FP
+    cached = _DEFAULT_FP
+    if cached is None:
+        cached = crypto.fingerprint()
+        _DEFAULT_FP = cached
+    return cached
 
 
 class Channel:
@@ -152,10 +155,26 @@ class Channel:
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
         access_key: str | bytes,
-        **kwargs: object,
+        *,
+        local_fp: bytes | None = None,
+        remote_fp: str | bytes | None = None,
+        state: CounterState | None = None,
+        algo: int | None = None,
+        timeout: float | None = None,
+        max_fails: int = MAX_FAILS,
     ) -> "Channel":
         """包装一条已连通的 TCP 流，并立即发送 hello。"""
-        channel = cls(reader, writer, access_key, **kwargs)
+        channel = cls(
+            reader,
+            writer,
+            access_key,
+            local_fp=local_fp,
+            remote_fp=remote_fp,
+            state=state,
+            algo=algo,
+            timeout=timeout,
+            max_fails=max_fails,
+        )
         await channel._send_hello()
         return channel
 
@@ -380,7 +399,15 @@ async def request(
 
 
 # --------------------------------------------------------------------- 服务端
-Handler = Callable[[bytes], Awaitable[bytes | None]]
+Handler = Callable[[bytes], Awaitable[bytes | None] | bytes | None]
+
+
+async def _call(handler: Handler, data: bytes) -> bytes | None:
+    """容许 handler 写同步函数：await 可等待对象，直接返回普通值。"""
+    result = handler(data)
+    if inspect.isawaitable(result):
+        return await cast(Awaitable[bytes | None], result)
+    return result
 
 
 async def serve(
@@ -416,7 +443,7 @@ async def serve(
                     continue
                 if ftype != FT_DATA:
                     continue
-                reply = await handler(data)
+                reply = await _call(handler, data)
                 if reply is not None:
                     await channel.send(FT_DATA, reply)
         except (ClosedError, ProtocolError, ConnectionError, OSError):
@@ -502,7 +529,7 @@ class PeerServer:
                     continue
                 if ftype != FT_DATA:
                     continue
-                reply = await self.handler(data)
+                reply = await _call(self.handler, data)
                 if reply is not None:
                     await channel.send(FT_DATA, reply)
         except (ClosedError, ProtocolError, ConnectionError, OSError):

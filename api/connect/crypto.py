@@ -17,11 +17,14 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from file.jsonfile import jsonfile
 
 try:  # 可选依赖：有就优先用 AES-256-GCM
-    from cryptography.hazmat.primitives.ciphers.aead import AESGCM as _AESGCM
+    from cryptography.hazmat.primitives.ciphers.aead import (  # type: ignore[import-not-found]
+        AESGCM as _AESGCM,
+    )
 except Exception:  # pragma: no cover - 取决于运行环境
     _AESGCM = None
 
@@ -56,8 +59,10 @@ def machine_id() -> str:
                     if value:
                         return value
         elif system == "Windows":  # pragma: no cover - 仅 Windows
-            import winreg
+            import importlib
 
+            # Pylance 在非 Windows 主机上不提供 winreg 的成员，用动态导入避开
+            winreg: Any = importlib.import_module("winreg")
             key = winreg.OpenKey(
                 winreg.HKEY_LOCAL_MACHINE,
                 r"SOFTWARE\Microsoft\Cryptography",
