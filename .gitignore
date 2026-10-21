@@ -7,3 +7,4 @@ __pycache__/
 configure/*
 skills/*
 history/*
+agentapi/tools/*.*
