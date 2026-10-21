@@ -19,10 +19,11 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import inspect
 import logging
 import socket
 import struct
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, cast
 
 from . import crypto, pack
 from .counter import CounterState, shared_state
@@ -398,7 +399,15 @@ async def request(
 
 
 # --------------------------------------------------------------------- 服务端
-Handler = Callable[[bytes], Awaitable[bytes | None]]
+Handler = Callable[[bytes], Awaitable[bytes | None] | bytes | None]
+
+
+async def _call(handler: Handler, data: bytes) -> bytes | None:
+    """容许 handler 写同步函数：await 可等待对象，直接返回普通值。"""
+    result = handler(data)
+    if inspect.isawaitable(result):
+        return await cast(Awaitable[bytes | None], result)
+    return result
 
 
 async def serve(
@@ -434,7 +443,7 @@ async def serve(
                     continue
                 if ftype != FT_DATA:
                     continue
-                reply = await handler(data)
+                reply = await _call(handler, data)
                 if reply is not None:
                     await channel.send(FT_DATA, reply)
         except (ClosedError, ProtocolError, ConnectionError, OSError):
@@ -520,7 +529,7 @@ class PeerServer:
                     continue
                 if ftype != FT_DATA:
                     continue
-                reply = await self.handler(data)
+                reply = await _call(self.handler, data)
                 if reply is not None:
                     await channel.send(FT_DATA, reply)
         except (ClosedError, ProtocolError, ConnectionError, OSError):
