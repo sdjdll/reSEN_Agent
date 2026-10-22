@@ -24,6 +24,45 @@ _CONFIG_KEYS = ("reasoning_effort", "think_collapsed", "context_limit", "peer_se
 _SETTING_ORDER = ("apikey", "baseurl", "modelname", "access_key", *_CONFIG_KEYS)
 _RESERVED_KEYS = ("config", "memory", "current")
 
+# 仅用于启动提示，不会因此拒绝启动
+_PLACEHOLDER_VALUES = {
+    "",
+    "sk-你的密钥",
+    "你的密钥",
+    "your-api-key",
+    "your_api_key",
+    "your-api-key-here",
+    "sk-your-key",
+    "sk-xxx",
+    "sk-xxxx",
+    "xxx",
+    "changeme",
+    "none",
+    "null",
+}
+
+
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ("" if value is None else str(value))
+
+
+def _is_placeholder(value: Any) -> bool:
+    text = _text(value).lower()
+    return (
+        text in _PLACEHOLDER_VALUES
+        or "你的密钥" in text
+        or "your-api-key" in text
+        or "your_api_key" in text
+    )
+
+
+def _client_for(apikey: str, baseurl: str, modelname: str) -> agentapi:
+    # 空值/占位符不阻止启动：用临时占位凭据构造，真正调用失败时再由 UI 提示
+    return agentapi(openai(
+        base_url=_text(baseurl) or "https://api.openai.com/v1",
+        api_key=_text(apikey) or "sk-unconfigured",
+    ), _text(modelname))
+
 def _guarded(fn: Callable[_P, Awaitable[_R]]) -> Callable[_P, Awaitable[_R]]:
     @wraps(fn)
     async def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
@@ -84,6 +123,15 @@ class core:
 
     def notice(self) -> str:
         return self._notice
+
+    def missing_settings(self) -> list[str]:
+        return [
+            key for key in ("apikey", "baseurl", "modelname")
+            if _is_placeholder(self._dick.str(key))
+        ]
+
+    def configured(self) -> bool:
+        return not self.missing_settings()
 
     def switch(self, name: str) -> None:
         if name == self._current or name not in self._sessions:
@@ -225,7 +273,7 @@ class core:
 
     def _reconnect(self) -> None:
         name = self.model()
-        self._client = agentapi(openai(base_url=self._dick.str("baseurl"), api_key=self._dick.str("apikey")), name)
+        self._client = _client_for(self._dick.str("apikey"), self._dick.str("baseurl"), name)
 
     @staticmethod
     def _parse_extra(raw: str) -> list[dict[str, Any]]:
@@ -319,13 +367,10 @@ class core:
             pass
 
     def __init__(self, apikey: str, baseurl: str, modelname: str, id:str|None=None) -> None:
-        self._client = agentapi(openai(
-            base_url=baseurl,
-            api_key=apikey
-        ), modelname)
         here = Path(__file__).resolve().parent.parent / "configure"
         self._dick = dick(str(here / "config.json"))
         self._memfile = dick(str(here / "memory.json"))
+        self._client = _client_for(apikey, baseurl, modelname)
         self._load_sessions()
         self._config = self._load_config()
         self._extra_index = self._dick.int("extra_index", 0)

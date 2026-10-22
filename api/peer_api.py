@@ -274,8 +274,14 @@ def make_server(
         raise api_error(
             f"access_key 还是占位值 {NO_ACCESS_KEY!r}：用 --key 传一个，或把 key 写进 {_CONFIG}"
         )
+    apikey = str(cfg.str("apikey") or "").strip()
+    if not apikey:
+        raise api_error(f"配置未完善：apikey 为空，请先在 F2 设置里填写（{_CONFIG}）")
     api = agent_api(
-        openai(base_url=cfg.str("baseurl"), api_key=cfg.str("apikey")),
+        openai(
+            base_url=str(cfg.str("baseurl") or "").strip() or "https://api.openai.com/v1",
+            api_key=apikey,
+        ),
         cfg.str("modelname"),
     )
     enabled = tools_enabled() if use_tools is None else use_tools

@@ -102,6 +102,7 @@ class main(App):
 
     _core: core
     _cfg: dick
+    _setup_hint: str = ""
     _EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max")
     _allow_all: bool = False
     _allow_turn: bool = False
@@ -113,13 +114,24 @@ class main(App):
     def __init__(self):
         super().__init__()
         cfgpath = Path(__file__).resolve().parent.parent / "configure" / "config.json"
-        if not cfgpath.exists():
+        created = not cfgpath.exists()
+        if created:
             cfgpath.parent.mkdir(parents=True, exist_ok=True)
             jsonfile(str(cfgpath)).write(_DEFAULT_CONFIG)
-            raise agent_error(f"配置文件不存在，已创建默认配置：{cfgpath}（请填写 apikey/baseurl/modelname 后重新启动）")
         self._cfg = dick(str(cfgpath))
         self._core = core(self._cfg.str("apikey"), self._cfg.str("baseurl"), self._cfg.str("modelname"))
         self._sync_title()
+        missing = self._core.missing_settings()
+        if created:
+            self._setup_hint = (
+                f"未找到配置文件，已创建默认配置：{cfgpath}。"
+                f"请按 F2 填写 {' / '.join(missing) or '相关配置'} 后使用"
+            )
+        elif missing:
+            self._setup_hint = (
+                f"配置未完善：{' / '.join(missing)} 为空或仍是占位符。"
+                "请按 F2 填写后使用"
+            )
 
     def _sync_title(self) -> None:
         self.title = self._core.current() or "（无会话）"
@@ -153,6 +165,8 @@ class main(App):
         )
 
     async def on_mount(self) -> None:
+        if self._setup_hint:
+            await self._note(f"⚙ {self._setup_hint}")
         self._show_usage()
         self._watch_signals()
         if self._core.peer_serve():

@@ -5,6 +5,7 @@ class filerw:
     path: str
     def __init__(self, path: str):
         self.path = path
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         try:
             with open(path, mode="x") as f:
                 f.write("")
