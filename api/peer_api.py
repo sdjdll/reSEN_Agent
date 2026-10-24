@@ -41,13 +41,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from agentapi.agentapi import agent_api
 from api.connect import session
+from file.config import NO_ACCESS_KEY, config
 from file.dick import dick
 from file.jsonfile import jsonfile
 
 _CONFIG = Path(__file__).resolve().parents[1] / "configure" / "config.json"
 _CONNECT = Path(__file__).resolve().parents[1] / "configure" / "connect.json"
 
-NO_ACCESS_KEY = "NO-ACCESS_KEY"
 NO_APIURL = "NO-APIURL"
 PORT = session.PORT
 DEFAULT_HOST = "0.0.0.0"
@@ -240,12 +240,12 @@ async def _handle(
 
 
 def tools_enabled() -> bool:
-    return dick(str(_CONFIG)).bool("peer_tools", True)
+    return config.bool("peer_tools", True)
 
 
 def configured_address(cfg: dick | None = None) -> tuple[str, int]:
     """监听地址：优先 config.json 的 ``peer_host``/``peer_port``，缺失或非法时回落默认值。"""
-    cfg = cfg if cfg is not None else dick(str(_CONFIG))
+    cfg = cfg if cfg is not None else config
     host = str(cfg.str("peer_host", DEFAULT_HOST) or DEFAULT_HOST).strip() or DEFAULT_HOST
     try:
         port = int(cfg.int("peer_port", PORT))
@@ -282,7 +282,7 @@ def make_server(
     host: str | None = None,
     port: int | None = None,
 ) -> PeerServer:
-    cfg = dick(str(_CONFIG))
+    cfg = config
     access_key = key if key is not None else cfg.str("access_key", NO_ACCESS_KEY)
     if access_key == NO_ACCESS_KEY:
         raise api_error(
@@ -336,7 +336,7 @@ def probe(url: str, key: str | None = None, text: str = "ping") -> int:
     """按 peer 协议打一发请求并打印结果（诊断用）。"""
     host, port = _target(url)
     if key is None:
-        key = dick(str(_CONFIG)).str("access_key", NO_ACCESS_KEY)
+        key = config.str("access_key", NO_ACCESS_KEY)
     print(f"TCP {host}:{port}")
     print(f"  access_key：{'（空）' if not key else '已提供'}")
     print(f"  content: {text!r}")

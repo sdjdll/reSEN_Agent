@@ -9,18 +9,15 @@
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import Any, Coroutine, TypeVar, cast
 from urllib.parse import urlsplit
 
 from openai.types.chat import ChatCompletionMessageParam as ccmp
 
 from api.peer_api import NO_ACCESS_KEY, PORT, chat, remember
-from file.dick import dick
+from file.config import config
 
 from .interface.meta_tool import meta_tool
-
-_CONFIG = Path(__file__).resolve().parents[2] / "configure" / "config.json"
 
 _DEFAULT_TIMEOUT = 120.0
 _SCHEMES = ("tcp", "http", "https")
@@ -160,7 +157,7 @@ class peer_agent(meta_tool):
         messages = self._messages(kwargs)
         url, host, port = self._endpoint(kwargs)
         raw_key = kwargs.get("access_key")
-        access_key = dick(str(_CONFIG)).str("access_key", NO_ACCESS_KEY) if raw_key is None else str(raw_key)
+        access_key = config.str("access_key", NO_ACCESS_KEY) if raw_key is None else str(raw_key)
         reply = _sync(chat(messages, access_key=access_key, url=url, timeout=self._timeout(kwargs)))
         shown = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
         out: dict[str, Any] = {

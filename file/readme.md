@@ -43,3 +43,9 @@
 - 一般情况下，内存的数据永远比磁盘里的新
     - `set`只更新内存，避免了磁盘大量写入
 - 多实例状态下后写入的数据会覆盖前面的，所以最好全局单实例，或者一个文件一个实例
+
+## [config.py](config.py)
+> 全局共享的 `configure/config.json` 句柄
+- 模块级单例 `config`：整个进程只构造一次 `dick`，避免多实例互相覆写
+- `config.json` 不存在时先写入 `DEFAULT_CONFIG`；`config_created` 标记是否为本次新建
+- 其它模块统一 `from file.config import config`，不要再自己 `dick("…/config.json")`

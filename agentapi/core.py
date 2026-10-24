@@ -12,6 +12,7 @@ from textual.widgets import Static
 
 from .agentapi import agent_api as agentapi, _from_message
 from api.peer_api import NO_ACCESS_KEY
+from file.config import config
 from file.dick import dick
 
 class agent_error(Exception):
@@ -377,7 +378,7 @@ class core:
 
     def __init__(self, apikey: str, baseurl: str, modelname: str, id:str|None=None) -> None:
         here = Path(__file__).resolve().parent.parent / "configure"
-        self._dick = dick(str(here / "config.json"))
+        self._dick = config
         self._memfile = dick(str(here / "memory.json"))
         self._client = _client_for(apikey, baseurl, modelname)
         self._load_sessions()
