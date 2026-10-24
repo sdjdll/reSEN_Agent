@@ -74,6 +74,9 @@
 
 可用环境变量 `PYTHON` 指定解释器，例如 `PYTHON=python3.12 ./start.sh`。
 
+> 脚本需要 bash。若用 `sh start.sh` 调起（Ubuntu 的 `/bin/sh` 是 dash），脚本会自动切回 bash 重跑；
+> 系统没有 bash 时会给出明确报错。
+
 **Windows**
 
 ```bat

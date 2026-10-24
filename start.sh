@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
+
+# 被 `sh start.sh`（Ubuntu 下 /bin/sh 是 dash）调起时，dash 不支持
+# ${BASH_SOURCE[0]}、[[ ]] 和 pipefail —— 这里先切回 bash 再继续。
+if [ -z "${BASH_VERSION:-}" ]; then
+    if [ -f "$0" ]; then
+        for candidate in bash /usr/bin/bash /bin/bash; do
+            if command -v "$candidate" >/dev/null 2>&1; then
+                exec "$candidate" "$0" "$@"
+            fi
+        done
+    fi
+    printf '错误：本脚本需要 bash，请用 ./start.sh 或 bash start.sh 运行\n' >&2
+    exit 1
+fi
+
 set -Eeuo pipefail
 
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
