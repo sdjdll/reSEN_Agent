@@ -263,8 +263,6 @@ class PeerServer(session.PeerServer):
 
 
 def make_server(
-    host: str = "0.0.0.0",
-    port: int = PORT,
     key: str | None = None,
     use_tools: bool | None = None,
 ) -> PeerServer:
@@ -286,7 +284,7 @@ def make_server(
     )
     enabled = tools_enabled() if use_tools is None else use_tools
     handler = partial(_handle, api, enabled, lambda msg: print(f"[peer] {msg}", flush=True))
-    return PeerServer(api, handler, host, port, access_key, enabled)
+    return PeerServer(api, handler, cfg.str("peer_host","localhost"), cfg.int("peer_port", 1124), access_key, enabled)
 
 
 def serve(
@@ -295,7 +293,7 @@ def serve(
     key: str | None = None,
     use_tools: bool | None = None,
 ) -> None:
-    srv = make_server(host, port, key, use_tools)
+    srv = make_server(key, use_tools)
     print(f"peer 服务已启动：tcp://{host}:{port}（reSEN TCP v1）")
     print(
         f"  access_key：{'来自 --key' if key is not None else '取自 config.json'}；"

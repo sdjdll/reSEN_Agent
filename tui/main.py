@@ -178,7 +178,7 @@ class main(App):
 
     def _start_peer(self) -> str:
         try:
-            srv = peer_api.make_server("0.0.0.0", peer_api.PORT)
+            srv = peer_api.make_server()
         except peer_api.api_error as e:
             return f"⚠ peer 服务没起来（{e}）—— 改完 access_key 重启即可（f2 设置里能改）"
         except OSError as e:
