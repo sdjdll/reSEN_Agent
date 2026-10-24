@@ -30,15 +30,17 @@ print(reply)   # {"role": "assistant", "content": "..."}
 把 url 里缺的端口补成 `PORT`，显式写了端口就原样返回；没有主机名则抛 `api_error`。
 
 ### 端口
-- `PORT = 1124`：peer 服务的默认端口，客户端 `chat()` 内部对 `url` 走 `with_port()` 补齐，服务端默认监听它
+- `PORT = 1124`：peer 协议的默认端口，客户端 `chat()` 内部对 `url` 走 `with_port()` 补齐
+- `DEFAULT_HOST = "0.0.0.0"`：服务端默认监听地址
+- 服务端实际监听地址取 `config.json` 的 `peer_host` / `peer_port`，缺失或非法时回落 `0.0.0.0:1124`（见 `configured_address()`）
 
 ## 接收端（服务端）
 
-### `serve(host="0.0.0.0", port=PORT, key=None, use_tools=True)`
-起服务并阻塞（Cmd-C/Ctrl-C 停）。命令行入口一样：
+### `serve(host=None, port=None, key=None, use_tools=None)`
+起服务并阻塞（Cmd-C/Ctrl-C 停）；`host`/`port` 省略时取 `config.json` 的 `peer_host`/`peer_port`。命令行入口一样：
 ```bash
-python -m api.peer_api                              # 0.0.0.0:1124，access_key 取自 config.json
-python -m api.peer_api --port 9000 --key my-key     # 换端口/直接给 key
+python -m api.peer_api                              # 监听 config.json 的 peer_host/peer_port（缺省 0.0.0.0:1124）
+python -m api.peer_api --port 9000 --key my-key     # 临时覆盖端口/直接给 key
 python -m api.peer_api --no-tools                   # 强制关闭（默认看 config.json 的 peer_tools）
 python -m api.peer_api --probe http://host/chat --key k   # 只打一发请求看结果（诊断用，不起服务）
 ```
@@ -54,7 +56,7 @@ python -m api.peer_api --probe http://host/chat --key k   # 只打一发请求�
 
 ### `probe(url, key=None, text="ping") -> int`
 按 peer 协议打**一发**请求并打印状态行/响应头/响应体（`--probe` 就是它，退码 2xx=0 其余=1）。
-重点看 `Server:` 头：是本项目的服务就是 `reSEN-peer/1 ...` 开头，否则 1124 上跑的很可能是别的东西。
+重点看 `Server:` 头：是本项目的服务就是 `reSEN-peer/1 ...` 开头，否则该端口上跑的很可能是别的东西。
 
 ### 错误 → 先查什么
 | 报错 | 含义 | 看哪里 |
@@ -66,17 +68,19 @@ python -m api.peer_api --probe http://host/chat --key k   # 只打一发请求�
 | `ConnectTimeout` | 包被丢（防火墙） | 放行规则、网段 |
 | `HTTP 4xx/5xx：{...}` | 连上了，被对端拒/对端出错 | 响应体里的 `error` |
 
-### `make_server(host, port, key, use_tools) -> _Server`
+### `make_server(key=None, use_tools=None, host=None, port=None) -> PeerServer`
 只搭好不启动（起停自己控制：`srv.serve_forever()` / `srv.shutdown()`，也能嵌到别的进程里）。
+`host`/`port` 传了就用传的，否则取 `config.json` 的 `peer_host`/`peer_port`。
 
-> ⚠️ 默认监听 `0.0.0.0`，而“远端能不能驱动本地工具”由 config.json 里的开关键决定：
+> ⚠️ 默认监听 `0.0.0.0`（可在 config.json 里用 `peer_host`/`peer_port` 改），而“远端能不能驱动本地工具”由 config.json 里的开关键决定：
 > `"peer_tools": true | false`（缺省 **true**）。true 时拿到 `access_key` 的一方可以让本地模型
 > 在你机器上执行工具，只在你信任的网络里跑；CLI 的 `--no-tools` 可以无视配置强制关。
 > 这个键在 f2 的设置面板里能直接改（`core.settings()` 列了它），**改完要重启 TUI/服务才生效**（启动时读一次）。
 
-> [TUI](../tui/main.py)（`python tui/main.py`）启动时会自动调 `make_server` 起一份带 `0.0.0.0:PORT` 的，
-> 退出时关掉；`access_key` 还是占位值或 1124 被占就只在聊天区提一句、不影响用 TUI。
-> （所以手动跑 CLI 起服务时，记得 TUI 那边已经把 1124 占了）
+> [TUI](../tui/main.py)（`python tui/main.py`）启动时会自动调 `make_server` 起一份监听
+> `config.json` 的 `peer_host:peer_port`（缺省 `0.0.0.0:1124`）的，
+> 退出时关掉；`access_key` 还是占位值或端口被占就只在聊天区提一句、不影响用 TUI。
+> （所以手动跑 CLI 起服务时，记得 TUI 那边已经把配置的端口占了）
 >
 > 另有一个开关键 `"peer_serve": true | false`（缺省 **true**）决定 TUI 启动时起不起这份服务；
 > 在 `^p` 的 **peer 栏**里可以当场开关服务（状态写在行里，回车就切，端口即时释放/占用），

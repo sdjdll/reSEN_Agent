@@ -21,7 +21,8 @@ _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
 _CONFIG_KEYS = ("reasoning_effort", "think_collapsed", "context_limit", "peer_serve", "peer_tools", "extra")
-_SETTING_ORDER = ("apikey", "baseurl", "modelname", "access_key", *_CONFIG_KEYS)
+_ADDRESS_KEYS = ("peer_host", "peer_port")
+_SETTING_ORDER = ("apikey", "baseurl", "modelname", "access_key", *_CONFIG_KEYS, *_ADDRESS_KEYS)
 _RESERVED_KEYS = ("config", "memory", "current")
 
 # 仅用于启动提示，不会因此拒绝启动
@@ -329,6 +330,14 @@ class core:
         elif path in ("peer_serve", "peer_tools"):
             self._config[path] = self._parse_bool(value)
             self._save_config()
+        elif path == "peer_host":
+            self._dick.set("peer_host", value)
+            self._dick.update()
+        elif path == "peer_port":
+            if not value.isdigit() or not 0 < int(value) < 65536:
+                raise ValueError(f"peer_port 需要 1-65535 的端口号，收到 {value!r}")
+            self._dick.set("peer_port", int(value))
+            self._dick.update()
         elif path == "extra":
             self._config["extra"] = self._parse_extra(value)
             self._extra_index = 0

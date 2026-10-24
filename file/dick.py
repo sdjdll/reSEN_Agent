@@ -10,18 +10,20 @@ class dick:
         self.__data = self.jf.read()
 
     def int(self,key:str,default:int=0)->int:
-        return cast(int, self.__data.get(key,default))
+        return cast(int, self.any(key,default))
 
     def str(self,key:str,default:str="")->str:
-        return cast(str, self.__data.get(key,default))
+        return cast(str, self.any(key,default))
 
     def bool(self,key:str,default:bool=False)->bool:
-        return cast(bool, self.__data.get(key,default))
+        return cast(bool, self.any(key,default))
 
     def float(self,key:str,default:float=0.0)->float:
-        return cast(float, self.__data.get(key,default))
+        return cast(float, self.any(key,default))
 
     def any(self,key:str,default:Any)->Any:
+        if key not in self.__data:
+            self.__data.setdefault(key,default)
         return self.__data.get(key, default)
 
     def items(self)->dict[str,Any]:

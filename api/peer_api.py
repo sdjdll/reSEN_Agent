@@ -15,8 +15,8 @@
 
 命令行：
 ```bash
-python -m api.peer_api                          # 0.0.0.0:1124，access_key 取自 config.json
-python -m api.peer_api --port 9000 --key my-key # 换端口/直接给 key
+python -m api.peer_api                          # 监听 config.json 的 peer_host/peer_port（缺省 0.0.0.0:1124）
+python -m api.peer_api --port 9000 --key my-key # 临时覆盖端口/直接给 key
 python -m api.peer_api --no-tools               # 强制关闭（默认看 config.json 的 peer_tools）
 python -m api.peer_api --probe tcp://host:1124 --key k   # 只打一发请求看结果
 ```
@@ -50,6 +50,7 @@ _CONNECT = Path(__file__).resolve().parents[1] / "configure" / "connect.json"
 NO_ACCESS_KEY = "NO-ACCESS_KEY"
 NO_APIURL = "NO-APIURL"
 PORT = session.PORT
+DEFAULT_HOST = "0.0.0.0"
 
 _MAX_ROUNDS = 8
 _DEFAULT_SCHEME = "tcp"
@@ -242,6 +243,19 @@ def tools_enabled() -> bool:
     return dick(str(_CONFIG)).bool("peer_tools", True)
 
 
+def configured_address(cfg: dick | None = None) -> tuple[str, int]:
+    """监听地址：优先 config.json 的 ``peer_host``/``peer_port``，缺失或非法时回落默认值。"""
+    cfg = cfg if cfg is not None else dick(str(_CONFIG))
+    host = str(cfg.str("peer_host", DEFAULT_HOST) or DEFAULT_HOST).strip() or DEFAULT_HOST
+    try:
+        port = int(cfg.int("peer_port", PORT))
+    except (TypeError, ValueError):
+        port = PORT
+    if not 0 < port < 65536:
+        port = PORT
+    return host, port
+
+
 class PeerServer(session.PeerServer):
     """在 TCP 帧通道上跑本地模型的 peer 服务。"""
 
@@ -265,6 +279,8 @@ class PeerServer(session.PeerServer):
 def make_server(
     key: str | None = None,
     use_tools: bool | None = None,
+    host: str | None = None,
+    port: int | None = None,
 ) -> PeerServer:
     cfg = dick(str(_CONFIG))
     access_key = key if key is not None else cfg.str("access_key", NO_ACCESS_KEY)
@@ -284,17 +300,25 @@ def make_server(
     )
     enabled = tools_enabled() if use_tools is None else use_tools
     handler = partial(_handle, api, enabled, lambda msg: print(f"[peer] {msg}", flush=True))
-    return PeerServer(api, handler, cfg.str("peer_host","localhost"), cfg.int("peer_port", 1124), access_key, enabled)
+    bind_host, bind_port = configured_address(cfg)
+    return PeerServer(
+        api,
+        handler,
+        host if host else bind_host,
+        port if port is not None else bind_port,
+        access_key,
+        enabled,
+    )
 
 
 def serve(
-    host: str = "0.0.0.0",
-    port: int = PORT,
+    host: str | None = None,
+    port: int | None = None,
     key: str | None = None,
     use_tools: bool | None = None,
 ) -> None:
-    srv = make_server(key, use_tools)
-    print(f"peer 服务已启动：tcp://{host}:{port}（reSEN TCP v1）")
+    srv = make_server(key, use_tools, host, port)
+    print(f"peer 服务已启动：tcp://{srv.host}:{srv.port}（reSEN TCP v1）")
     print(
         f"  access_key：{'来自 --key' if key is not None else '取自 config.json'}；"
         f"远端驱动本地工具：{'允许' if srv.use_tools else '禁止'}"
@@ -335,8 +359,8 @@ def probe(url: str, key: str | None = None, text: str = "ping") -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="peer 服务端：TCP 加密帧 + 本地 agent 应答")
-    parser.add_argument("--host", default="0.0.0.0", help="监听地址（默认 0.0.0.0，对外可达）")
-    parser.add_argument("--port", type=int, default=PORT, help=f"监听端口（默认 {PORT}）")
+    parser.add_argument("--host", default=None, help="监听地址（默认取 config.json 的 peer_host，缺省 0.0.0.0）")
+    parser.add_argument("--port", type=int, default=None, help=f"监听端口（默认取 config.json 的 peer_port，缺省 {PORT}）")
     parser.add_argument("--key", default=None, help="access_key（默认取自 config.json）")
     parser.add_argument("--no-tools", action="store_true", help="禁止远端驱动本地工具")
     parser.add_argument("--probe", default=None, help="只打一发请求（如 tcp://host:1124）")

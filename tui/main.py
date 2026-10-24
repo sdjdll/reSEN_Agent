@@ -177,16 +177,17 @@ class main(App):
             await self._note(f"⚠ {self._core.notice()}")
 
     def _start_peer(self) -> str:
+        host, port = peer_api.configured_address()
         try:
             srv = peer_api.make_server()
         except peer_api.api_error as e:
             return f"⚠ peer 服务没起来（{e}）—— 改完 access_key 重启即可（f2 设置里能改）"
         except OSError as e:
-            return f"⚠ peer 服务没起来（{type(e).__name__}: {e}）—— 1124 可能被别的进程占了（ss -ltnp | grep 1124）"
+            return f"⚠ peer 服务没起来（{type(e).__name__}: {e}）—— {host}:{port} 可能被别的进程占了（ss -ltnp | grep {port}）"
         threading.Thread(target=srv.serve_forever, name="peer_api", daemon=True).start()
         self._peer_server = srv
         tools = "远端可驱动本地工具" if srv.use_tools else "远端不能驱动本地工具"
-        return f"peer 服务已监听 0.0.0.0:{peer_api.PORT}（access_key 取自 config.json；{tools}）"
+        return f"peer 服务已监听 {srv.host}:{srv.port}（access_key 取自 config.json；{tools}）"
 
     def _stop_peer(self) -> None:
         srv, self._peer_server = self._peer_server, None
@@ -205,9 +206,11 @@ class main(App):
         if self._peer_server is None:
             await self._note(self._start_peer())
         else:
+            srv = self._peer_server
+            address = f"{srv.host}:{srv.port}"
             self._stop_peer()
             state = "开" if self._core.peer_serve() else "关"
-            await self._note(f"peer 服务已关闭（开机自启还是「{state}」，{peer_api.PORT} 已释放）")
+            await self._note(f"peer 服务已关闭（开机自启还是「{state}」，{address} 已释放）")
 
     async def on_unmount(self) -> None:
         self._core.flush()

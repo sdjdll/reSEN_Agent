@@ -16,7 +16,7 @@
 - **上下文压缩**：一键把历史对话压缩成摘要，释放上下文窗口
 - **双模记忆**：`temp` 暂存随用随删；`memory` 长期记忆的修改/删除必须给出理由并写入审计日志
 - **技能库**：以 Markdown（YAML frontmatter）保存可复用流程，支持增删改查与检索
-- **peer 协同**：内置 HTTP 服务（默认 `0.0.0.0:1124`），多个实例可互相调用；连接过的设备记入 `configure/connect.json`
+- **peer 协同**：内置 peer 服务（监听 `config.json` 里的 `peer_host:peer_port`，缺省 `0.0.0.0:1124`），多个实例可互相调用；连接过的设备记入 `configure/connect.json`
 - **跨平台启动**：`start.sh` / `start.ps1` / `start.bat`
 
 ## 快速开始
@@ -40,6 +40,8 @@
   "context_limit": 128000,
   "peer_serve": true,
   "peer_tools": true,
+  "peer_host": "0.0.0.0",
+  "peer_port": 1124,
   "extra": [
     { "thinking": { "type": "enabled" } },
     { "thinking": { "type": "disabled" } }
@@ -57,6 +59,8 @@
 | `context_limit` | 上下文上限（token），用于底部用量显示 |
 | `peer_serve` | 启动 TUI 时是否自动拉起 peer 服务（默认 `true`） |
 | `peer_tools` | 是否允许远端 peer 驱动本地工具（默认 `true`） |
+| `peer_host` | peer 服务监听地址（默认 `0.0.0.0`，即所有网卡） |
+| `peer_port` | peer 服务监听端口（默认 `1124`；改了之后 TUI 提示里的地址会跟着变） |
 | `extra` | 额外请求体列表，TUI 中可切换；如 `thinking` 开关 |
 
 ### 3. 安装与启动
@@ -178,8 +182,8 @@ class CurrentTime(hotplug_tool):
 每个实例都可以作为 peer 服务端，让其他实例通过 `peer_agent` 工具调用：
 
 ```bash
-python api/peer_api.py                 # 监听 0.0.0.0:1124
-python api/peer_api.py --port 1124 --key mykey
+python api/peer_api.py                 # 监听 config.json 的 peer_host:peer_port（缺省 0.0.0.0:1124）
+python api/peer_api.py --port 9000 --key mykey   # 临时覆盖端口 / 直接给 key
 python api/peer_api.py --no-tools      # 禁止远端驱动本地工具
 python api/peer_api.py --probe http://192.168.1.7:1124
 ```
